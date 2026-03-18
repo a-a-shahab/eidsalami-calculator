@@ -1,11 +1,5 @@
 
-// ==================== FIREBASE CONFIG (REPLACE WITH YOURS) ====================
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
+// ==================== FIREBASE CONFIG ====================
 const firebaseConfig = {
   apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
   authDomain: "eid-salami-calculator.firebaseapp.com",
@@ -15,8 +9,6 @@ const firebaseConfig = {
   appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
@@ -240,10 +232,6 @@ function showResultScreen(isShared = false) {
     loadLeaderboard();
     loadLeaderboard(true);
     
-    if (!isShared) {
-        // Also save from shared link
-        saveToLeaderboard(userName, salamiAmount, userIP);
-    }
 }
 
 function takeScreenshot() {
@@ -256,10 +244,10 @@ function takeScreenshot() {
     });
 }
 
-function shareResult() {
+function shareResult(event) {
     const base = window.location.origin + window.location.pathname;
     const link = `${base}?name=${encodeURIComponent(userName)}&salami=${salamiAmount}`;
-    
+
     navigator.clipboard.writeText(link).then(() => {
         const btn = event.target;
         const original = btn.textContent;
