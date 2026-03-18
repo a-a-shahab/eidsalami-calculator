@@ -1,0 +1,88 @@
+=== admin.html ===
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin • EidSalamiCalculator</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <style>
+        body { background: #0a3d2a; }
+        .admin-container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: rgba(0,0,0,0.3);
+        }
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #f4d03f55;
+        }
+        th {
+            background: #f4d03f;
+            color: #0a3d2a;
+        }
+        .delete-btn {
+            background: #c0392b;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+        .search-box {
+            width: 100%;
+            max-width: 400px;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <h1 style="color:#f4d03f;text-align:center;margin-bottom:30px;">🔧 ADMIN PANEL - Eid Salami Calculator</h1>
+        
+        <div style="display:flex;gap:15px;align-items:center;margin-bottom:20px;">
+            <input type="text" id="search-input" class="search-box" placeholder="নাম দিয়ে সার্চ করো..." onkeyup="filterTable()">
+            <button onclick="sortBySalami()" class="btn primary">সর্বোচ্চ সালামি</button>
+            <button onclick="sortByLatest()" class="btn primary">সর্বশেষ এন্ট্রি</button>
+        </div>
+        
+        <table id="admin-table">
+            <thead>
+                <tr>
+                    <th>নাম</th>
+                    <th>সালামি</th>
+                    <th>IP</th>
+                    <th>সময়</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+        
+        <div style="margin-top:40px;text-align:center;">
+            <button onclick="deleteAllData()" class="delete-btn">🗑️ সব ডেটা মুছে ফেলো</button>
+        </div>
+        
+        <p style="text-align:center;margin-top:30px;opacity:0.7;">
+            <a href="index.html" style="color:#f4d03f;text-decoration:none;">← মেইন অ্যাপে ফিরে যাও</a>
+        </p>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

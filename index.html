@@ -1,0 +1,86 @@
+=== index.html ===
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ঈদ সালামি ক্যালকুলেটর 💸</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <!-- html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- canvas-confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <h1>ঈদ সালামি ক্যালকুলেটর 💸</h1>
+            <p class="subtitle">তোমার ঈদ সালামি কত টাকা হবে? 🎉</p>
+        </header>
+
+        <!-- LANDING SCREEN -->
+        <div id="landing-screen" class="screen active">
+            <div class="hero">
+                <div class="emoji">🕌💰</div>
+                <button onclick="startApp()" class="btn primary">শুরু করো</button>
+            </div>
+        </div>
+
+        <!-- NAME INPUT SCREEN -->
+        <div id="name-screen" class="screen">
+            <h2>তোমার নাম কি?</h2>
+            <input type="text" id="name-input" placeholder="যেমন: আব্দুল্লাহ" class="input-field">
+            <button onclick="saveName()" class="btn primary">পরবর্তী →</button>
+        </div>
+
+        <!-- QUIZ SCREEN -->
+        <div id="quiz-screen" class="screen">
+            <div class="progress">প্রশ্ন <span id="q-number">1</span>/5</div>
+            <h2 id="question-text"></h2>
+            <input type="text" id="answer-input" placeholder="উত্তর লিখো..." class="input-field">
+            <button onclick="nextQuestion()" class="btn primary">পরবর্তী →</button>
+        </div>
+
+        <!-- RESULT SCREEN -->
+        <div id="result-screen" class="screen">
+            <div id="result-card" class="result-card">
+                <div class="result-header">
+                    <h2>ঈদ মোবারক, <span id="result-name"></span>! 🎊</h2>
+                </div>
+                <div class="salami-amount">
+                    <span id="result-salami"></span> টাকা
+                </div>
+                <p class="salami-text">সালামি 💰</p>
+                
+                <div class="actions">
+                    <button onclick="takeScreenshot()" class="btn secondary">📸 স্ক্রিনশট ডাউনলোড</button>
+                    <button onclick="shareResult()" class="btn secondary">🔗 শেয়ার করো</button>
+                    <button onclick="restartApp()" class="btn primary">আবার খেলো</button>
+                </div>
+            </div>
+            
+            <!-- LEADERBOARD -->
+            <div class="leaderboard">
+                <h3>🏆 লিডারবোর্ড (টপ ১০)</h3>
+                <div id="leaderboard-list" class="lb-list"></div>
+            </div>
+        </div>
+
+        <!-- FLOATING LEADERBOARD (visible on all screens except result) -->
+        <div id="floating-lb" class="floating-lb">
+            <h4>🏆 টপ ১০</h4>
+            <div id="floating-lb-list" class="lb-list-small"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Powered by Firebase • Eid Mubarak ২০২৬</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
