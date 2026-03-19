@@ -27,10 +27,9 @@ let selectedMCQ = '';
 const questionList = [
     { text: "বল তো আমার নাম কি?", type: "short" },
     { 
-        text: "তোমার সাথে আমার সম্পর্ক কি?", 
-        type: "mcq", 
-        options: ["জুনিয়র", "বন্ধু", "অনলাইন বন্ধু", "চিনি না"] 
-    },
+        text: "আমি তোমার কি হই?", 
+        type: "short"
+    }, 
     { 
         text: "তোমার সাথে কি আমার ছবি আছে?", 
         type: "mcq", 
@@ -47,9 +46,8 @@ const questionList = [
         options: ["বলদ সিনিয়র", "স্মার্ট", "ভাই আপনি সেরা"] 
     },
     { 
-        text: "তোমার কি মনে হয় আমার GF/BF আছে?", 
-        type: "mcq", 
-        options: ["আছে", "নাই"] 
+        text: "সালামির টাকা দিয়ে কি করবে?", 
+        type: "short"
     }
 ];
 
@@ -251,7 +249,7 @@ function finishQuiz() {
     if (correctNameFlag) {
         salamiAmount = Math.floor(Math.random() * 26) + 1;
     } else {
-        salamiAmount = Math.floor(Math.random() * 120) + 2;
+        salamiAmount = Math.floor(Math.random() * 1000) + 120;
     }
     
     saveToLeaderboard(userName, salamiAmount, userIP);
