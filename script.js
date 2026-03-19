@@ -1,320 +1,447 @@
+// ================================================
+//   EID SALAMI CALCULATOR — SCRATCH CARD EDITION
+//   script.js — Main App Logic + Firebase
+// ================================================
 
-// ==================== FIREBASE CONFIG ====================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  orderBy,
+  where,
+  updateDoc,
+  doc,
+  limit,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// =====================================================
+// 🔥 FIREBASE CONFIG — Replace with your own values!
+// =====================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
-  authDomain: "eid-salami-calculator.firebaseapp.com",
-  projectId: "eid-salami-calculator",
-  storageBucket: "eid-salami-calculator.firebasestorage.app",
-  messagingSenderId: "1004762862713",
-  appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const COL = "leaderboard";
 
-// ==================== GLOBAL VARIABLES ====================
-let userName = '';
-let userIP = '';
-let correctNameFlag = false;
-let salamiAmount = 0;
-let quizQuestions = [];
-let currentQIndex = 0;
-let userAnswers = [];
-let selectedMCQ = '';
+// =====================================================
+// Helpers
+// =====================================================
 
-// ==================== QUESTION LIST (1 Short + 5 MCQ) ====================
-const questionList = [
-    { text: "বল তো আমার নাম কি?", type: "short" },
-    { 
-        text: "আমি তোমার কি হই?", 
-        type: "short"
-    }, 
-    { 
-        text: "তোমার সাথে কি আমার ছবি আছে?", 
-        type: "mcq", 
-        options: ["আছে", "নাই"] 
-    },
-    { 
-        text: "তোমার CG কত?", 
-        type: "mcq", 
-        options: ["৩ এর নিচে", "৩-৩.৫", "৩.৫-৩.৭৫", "৩.৭৫+"] 
-    },
-    { 
-        text: "তুমি আমাকে কি মনে করো?", 
-        type: "mcq", 
-        options: ["বলদ সিনিয়র", "স্মার্ট", "ভাই আপনি সেরা"] 
-    },
-    { 
-        text: "সালামির টাকা দিয়ে কি করবে?", 
-        type: "short"
-    }
-];
-
-// ==================== UTILITIES ====================
-function shuffle(array) {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function getIP() {
-    try {
-        const res = await fetch('https://api.ipify.org?format=json');
-        const data = await res.json();
-        return data.ip;
-    } catch (e) {
-        let uid = localStorage.getItem('eid_uid');
-        if (!uid) {
-            uid = 'uid_' + Date.now() + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('eid_uid', uid);
-        }
-        return uid;
-    }
+function getOrCreateUID() {
+  let uid = localStorage.getItem("eid_uid");
+  if (!uid) {
+    uid = "uid_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
+    localStorage.setItem("eid_uid", uid);
+  }
+  return uid;
 }
 
-// ==================== FIREBASE FUNCTIONS ====================
-async function saveToLeaderboard(name, salami, ip) {
-    if (!ip) return;
-    const q = db.collection("leaderboard").where("ip", "==", ip);
-    const snapshot = await q.get();
-    
-    if (!snapshot.empty) {
-        const docRef = snapshot.docs[0].ref;
-        const existing = snapshot.docs[0].data();
-        if (salami > existing.salami) {
-            await docRef.update({
-                name: name,
-                salami: salami,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
-    } else {
-        await db.collection("leaderboard").add({
-            name: name,
-            salami: salami,
-            ip: ip,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+async function getUserIP() {
+  try {
+    const r = await fetch("https://api.ipify.org?format=json");
+    const d = await r.json();
+    return d.ip || getOrCreateUID();
+  } catch {
+    return getOrCreateUID();
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => {
+    s.classList.remove("active");
+  });
+  const s = document.getElementById(id);
+  if (s) { s.classList.add("active"); }
+}
+
+// Generate stars
+(function generateStars() {
+  const container = document.getElementById("stars");
+  if (!container) return;
+  for (let i = 0; i < 60; i++) {
+    const star = document.createElement("div");
+    star.classList.add("star");
+    const size = Math.random() * 2.5 + 0.5;
+    star.style.cssText = `
+      width:${size}px; height:${size}px;
+      top:${Math.random()*100}%; left:${Math.random()*100}%;
+      --dur:${(Math.random()*3+2).toFixed(1)}s;
+      animation-delay:${(Math.random()*4).toFixed(1)}s;
+    `;
+    container.appendChild(star);
+  }
+})();
+
+// =====================================================
+// App State
+// =====================================================
+let state = {
+  userName:   "",
+  targetName: "",
+  salami:     0,
+  ip:         "",
+  uid:        getOrCreateUID()
+};
+
+// =====================================================
+// URL PARAM: Direct Result View
+// =====================================================
+function checkURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  const name   = params.get("name");
+  const target = params.get("target");
+  const sal    = parseInt(params.get("salami"));
+  if (name && target && sal) {
+    state.userName   = name;
+    state.targetName = target;
+    state.salami     = sal;
+    showResult();
+    return true;
+  }
+  return false;
+}
+
+// =====================================================
+// LEADERBOARD
+// =====================================================
+async function loadLeaderboard(tbodyId) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  try {
+    const q   = query(collection(db, COL), orderBy("salami", "desc"), limit(10));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      tbody.innerHTML = `<tr><td colspan="3" class="lb-loading">এখনো কোনো এন্ট্রি নেই</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = "";
+    let rank = 1;
+    snap.forEach(d => {
+      const data = d.data();
+      const tr   = document.createElement("tr");
+      if (rank <= 3) tr.classList.add(`rank-${rank}`);
+      tr.innerHTML = `
+        <td>${rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : rank}</td>
+        <td>${escapeHTML(data.username || "—")}</td>
+        <td>৳ ${data.salami || 0}</td>`;
+      tbody.appendChild(tr);
+      rank++;
+    });
+  } catch (e) {
+    console.error("Leaderboard error:", e);
+    tbody.innerHTML = `<tr><td colspan="3" class="lb-loading">লোড করতে সমস্যা হচ্ছে</td></tr>`;
+  }
+}
+
+function escapeHTML(str) {
+  return str.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+// =====================================================
+// FIRESTORE: Save or Update
+// =====================================================
+async function saveToFirestore() {
+  try {
+    const ip  = state.ip || state.uid;
+    const q   = query(collection(db, COL), where("ip", "==", ip));
+    const snap = await getDocs(q);
+
+    if (!snap.empty) {
+      // Entry exists — update only if new salami > old
+      const existing = snap.docs[0];
+      const oldSalami = existing.data().salami || 0;
+      if (state.salami > oldSalami) {
+        await updateDoc(doc(db, COL, existing.id), {
+          username:   state.userName,
+          targetName: state.targetName,
+          salami:     state.salami,
+          timestamp:  new Date().toISOString()
         });
-    }
-}
-
-async function loadLeaderboard(containerId) {
-    const q = db.collection("leaderboard")
-        .orderBy("salami", "desc")
-        .limit(10);
-    
-    const snap = await q.get();
-    const list = snap.docs.map(doc => {
-        const d = doc.data();
-        return { name: d.name, salami: d.salami };
-    });
-    
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    
-    list.forEach((item, i) => {
-        const div = document.createElement('div');
-        div.className = 'lb-item';
-        div.innerHTML = `
-            <span>${i+1}. ${item.name}</span>
-            <span style="color:#f4d03f;font-weight:bold;">${item.salami} টাকা</span>
-        `;
-        container.appendChild(div);
-    });
-}
-
-// ==================== MODAL FUNCTIONS ====================
-function showLeaderboardModal() {
-    loadLeaderboard('modal-leaderboard-list');
-    document.getElementById('lb-modal').classList.add('active');
-}
-
-function hideLeaderboardModal() {
-    document.getElementById('lb-modal').classList.remove('active');
-}
-
-// ==================== APP FLOW ====================
-async function initApp() {
-    userIP = await getIP();
-    
-    // Check URL params for direct result
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('name') && params.has('salami')) {
-        userName = decodeURIComponent(params.get('name'));
-        salamiAmount = parseInt(params.get('salami'));
-        showResultScreen(true);
-    }
-}
-
-function startApp() {
-    document.getElementById('landing-screen').classList.remove('active');
-    document.getElementById('name-screen').classList.add('active');
-}
-
-function saveName() {
-    const input = document.getElementById('name-input');
-    userName = input.value.trim() || "অতিথি";
-    localStorage.setItem('eid_user_name', userName);
-    
-    document.getElementById('name-screen').classList.remove('active');
-    startQuiz();
-}
-
-function startQuiz() {
-    // Fixed short question + 4 random MCQ
-    quizQuestions = [questionList[0]];
-    const mcqs = shuffle(questionList.slice(1)).slice(0, 4);
-    quizQuestions = quizQuestions.concat(mcqs);
-    
-    currentQIndex = 0;
-    userAnswers = [];
-    correctNameFlag = false;
-    selectedMCQ = '';
-    
-    document.getElementById('quiz-screen').classList.add('active');
-    loadQuestion();
-}
-
-function loadQuestion() {
-    document.getElementById('q-number').textContent = currentQIndex + 1;
-    const q = quizQuestions[currentQIndex];
-    document.getElementById('question-text').textContent = q.text;
-    
-    const input = document.getElementById('answer-input');
-    const optionsDiv = document.getElementById('options-container');
-    
-    if (q.type === "short") {
-        input.style.display = 'block';
-        optionsDiv.style.display = 'none';
-        input.value = '';
-        document.getElementById('next-btn').style.display = 'block';
+      }
     } else {
-        input.style.display = 'none';
-        optionsDiv.style.display = 'flex';
-        optionsDiv.innerHTML = '';
-        document.getElementById('next-btn').style.display = 'none';
-        
-        q.options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'mcq-btn';
-            btn.textContent = opt;
-            btn.onclick = () => selectMCQ(opt);
-            optionsDiv.appendChild(btn);
-        });
+      await addDoc(collection(db, COL), {
+        username:   state.userName,
+        targetName: state.targetName,
+        salami:     state.salami,
+        ip:         ip,
+        uid:        state.uid,
+        timestamp:  new Date().toISOString()
+      });
     }
+  } catch (e) {
+    console.error("Firestore save error:", e);
+  }
 }
 
-function selectMCQ(answer) {
-    selectedMCQ = answer;
-    nextQuestion();
+// =====================================================
+// RESULT SCREEN
+// =====================================================
+function showResult() {
+  document.getElementById("result-congrats").textContent =
+    `${state.userName} Congratulations!! 🎉`;
+  document.getElementById("result-target").textContent =
+    `${state.targetName} এর থেকে সালামি বুঝে নাও 💰`;
+  document.getElementById("result-amount").textContent = state.salami;
+  showScreen("screen-result");
+  loadLeaderboard("result-lb-body");
+
+  // Trigger confetti celebration
+  triggerConfetti();
 }
 
-function nextQuestion() {
-    const q = quizQuestions[currentQIndex];
-    let answer = '';
-    
-    if (q.type === "short") {
-        answer = document.getElementById('answer-input').value.trim();
-    } else {
-        answer = selectedMCQ;
-    }
-    
-    userAnswers.push(answer);
-    
-    // Check only first question
-    if (currentQIndex === 0) {
-        const lower = answer.toLowerCase();
-        if (lower.includes('shahab') || lower.includes('sahab') || answer.includes('সাহাব')) {
-            correctNameFlag = true;
-        }
-    }
-    
-    currentQIndex++;
-    selectedMCQ = '';
-    
-    if (currentQIndex < 5) {
-        loadQuestion();
-    } else {
-        finishQuiz();
-    }
+function triggerConfetti() {
+  const colors = ["#F5C842", "#FFE082", "#1da553", "#ffffff", "#C89B00"];
+  confetti({ particleCount: 120, spread: 90, colors, origin: { y: 0.6 } });
+  setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, colors, origin: { x: 0 } }), 400);
+  setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, colors, origin: { x: 1 } }), 700);
 }
 
-function finishQuiz() {
-    document.getElementById('quiz-screen').classList.remove('active');
-    
-    if (correctNameFlag) {
-        salamiAmount = Math.floor(Math.random() * 26) + 1;
-    } else {
-        salamiAmount = Math.floor(Math.random() * 1000) + 120;
+// =====================================================
+// SCRATCH CARD ENGINE
+// =====================================================
+function initScratchCard() {
+  const canvas   = document.getElementById("scratch-canvas");
+  const card     = document.getElementById("scratch-card");
+  const progress = document.getElementById("scratch-progress");
+
+  const W = card.offsetWidth  || 340;
+  const H = card.offsetHeight || 220;
+
+  canvas.width  = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext("2d");
+
+  // Draw scratchable layer — dark gold texture
+  const grad = ctx.createLinearGradient(0, 0, W, H);
+  grad.addColorStop(0,   "#2a1a00");
+  grad.addColorStop(0.4, "#4a3200");
+  grad.addColorStop(1,   "#1a0e00");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Pattern overlay
+  ctx.strokeStyle = "rgba(245,200,66,0.12)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < W; i += 18) {
+    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke();
+  }
+  for (let j = 0; j < H; j += 18) {
+    ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(W, j); ctx.stroke();
+  }
+
+  // Label text
+  ctx.fillStyle = "rgba(245,200,66,0.55)";
+  ctx.font = "bold 18px 'Hind Siliguri', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("এখানে ঘষো 🪙", W / 2, H / 2 - 14);
+  ctx.font = "14px 'Hind Siliguri', sans-serif";
+  ctx.fillStyle = "rgba(245,200,66,0.35)";
+  ctx.fillText("Scratch Here", W / 2, H / 2 + 10);
+
+  // emoji decorations
+  ctx.font = "22px serif";
+  ctx.fillText("💰", 40, 45);
+  ctx.fillText("🎊", W - 45, 45);
+  ctx.fillText("✨", 40, H - 25);
+  ctx.fillText("🎁", W - 45, H - 25);
+
+  ctx.globalCompositeOperation = "destination-out";
+
+  let isDrawing = false;
+  let revealed  = false;
+
+  function getPos(e, canvas) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  }
+
+  function scratch(e) {
+    e.preventDefault();
+    if (!isDrawing || revealed) return;
+    const { x, y } = getPos(e, canvas);
+    ctx.beginPath();
+    ctx.arc(x, y, 28, 0, Math.PI * 2);
+    ctx.fill();
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const imgData = ctx.getImageData(0, 0, W, H);
+    let cleared = 0;
+    for (let i = 3; i < imgData.data.length; i += 4) {
+      if (imgData.data[i] === 0) cleared++;
     }
-    
-    saveToLeaderboard(userName, salamiAmount, userIP);
-    showResultScreen();
+    const pct = (cleared / (W * H)) * 100;
+    progress.style.width = Math.min(pct, 100) + "%";
+
+    if (pct >= 40 && !revealed) {
+      revealed = true;
+      revealComplete();
+    }
+  }
+
+  function revealComplete() {
+    // Animate canvas fade out
+    canvas.style.transition = "opacity 0.6s";
+    canvas.style.opacity = "0";
+    setTimeout(() => { canvas.style.display = "none"; }, 600);
+
+    // Save to Firestore
+    saveToFirestore();
+
+    // Transition to result after short delay
+    setTimeout(() => showResult(), 900);
+  }
+
+  canvas.addEventListener("mousedown",  () => isDrawing = true);
+  canvas.addEventListener("mousemove",  scratch);
+  canvas.addEventListener("mouseup",    () => isDrawing = false);
+  canvas.addEventListener("mouseleave", () => isDrawing = false);
+  canvas.addEventListener("touchstart", () => isDrawing = true, { passive: false });
+  canvas.addEventListener("touchmove",  scratch, { passive: false });
+  canvas.addEventListener("touchend",   () => isDrawing = false);
 }
 
-function showResultScreen(isShared = false) {
-    document.getElementById('result-screen').classList.add('active');
-    
-    document.getElementById('result-name').textContent = userName;
-    document.getElementById('result-salami').textContent = salamiAmount;
-    
-    confetti({
-        particleCount: 200,
-        spread: 90,
-        origin: { y: 0.6 }
+// =====================================================
+// SHARE
+// =====================================================
+function buildShareURL() {
+  const base = window.location.origin + window.location.pathname;
+  return `${base}?name=${encodeURIComponent(state.userName)}&target=${encodeURIComponent(state.targetName)}&salami=${state.salami}`;
+}
+
+// =====================================================
+// SCREENSHOT
+// =====================================================
+async function downloadResult() {
+  const el = document.getElementById("result-card");
+  try {
+    const canvas = await html2canvas(el, {
+      backgroundColor: "#0D5C2E",
+      scale: 2,
+      useCORS: true
     });
-    setTimeout(() => {
-        confetti({
-            particleCount: 150,
-            angle: 60,
-            spread: 70,
-            origin: { x: 0.1, y: 0.7 }
-        });
-    }, 300);
+    const link    = document.createElement("a");
+    link.download = "EidSalami_Result.png";
+    link.href     = canvas.toDataURL("image/png");
+    link.click();
+  } catch (e) {
+    console.error("Screenshot error:", e);
+    showToast("স্ক্রিনশট নিতে পারিনি 😢");
+  }
 }
 
-function takeScreenshot() {
-    const card = document.getElementById('result-card');
-    html2canvas(card, { scale: 2 }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `${userName}_eid_salami.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    });
-}
+// =====================================================
+// MAIN INIT
+// =====================================================
+async function main() {
+  // Fetch IP early
+  getUserIP().then(ip => { state.ip = ip; });
 
-function shareResult(event) {
-    const base = window.location.origin + window.location.pathname;
-    const link = `${base}?name=${encodeURIComponent(userName)}&salami=${salamiAmount}`;
+  // Check for shared URL params first
+  if (checkURLParams()) return;
 
-    navigator.clipboard.writeText(link).then(() => {
-        const btn = event.target;
-        const original = btn.textContent;
-        btn.textContent = '✅ লিংক কপি হয়েছে!';
-        setTimeout(() => btn.textContent = original, 2000);
-    });
-}
+  // Load leaderboard on start screen
+  loadLeaderboard("lb-body");
 
-function restartApp() {
-    window.location.reload();
-}
+  // ── Start Button ──
+  document.getElementById("btn-start").addEventListener("click", () => {
+    // Pre-fill from localStorage
+    const savedName   = localStorage.getItem("eid_userName")   || "";
+    const savedTarget = localStorage.getItem("eid_targetName") || "";
+    document.getElementById("user-name").value   = savedName;
+    document.getElementById("target-name").value = savedTarget;
+    showScreen("screen-names");
+  });
 
-// ==================== KEYBOARD SUPPORT ====================
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        const activeScreen = document.querySelector('.screen.active');
-        if (activeScreen && activeScreen.id === 'quiz-screen') {
-            const q = quizQuestions[currentQIndex];
-            if (q.type === "short") nextQuestion();
-        } else if (activeScreen && activeScreen.id === 'name-screen') {
-            saveName();
-        }
+  // ── Back Button ──
+  document.getElementById("btn-back-names").addEventListener("click", () => {
+    showScreen("screen-start");
+  });
+
+  // ── Proceed Button ──
+  document.getElementById("btn-proceed").addEventListener("click", () => {
+    const uName  = document.getElementById("user-name").value.trim();
+    const tName  = document.getElementById("target-name").value.trim();
+    const errEl  = document.getElementById("name-error");
+
+    if (!uName || !tName) {
+      errEl.style.display = "block";
+      return;
     }
-});
+    errEl.style.display = "none";
 
-// ==================== START ====================
-window.onload = initApp;
+    state.userName   = uName;
+    state.targetName = tName;
+    localStorage.setItem("eid_userName",   uName);
+    localStorage.setItem("eid_targetName", tName);
+
+    // Determine salami range
+    const betterRange = /shahab|sahab|সাহাব/i.test(tName);
+    state.salami = betterRange ? rand(10, 100) : rand(2, 50);
+
+    // Show scratch screen
+    showScreen("screen-scratch");
+    document.getElementById("scratch-prompt").textContent =
+      `${tName} এর কাছ থেকে কত পাচ্ছো দেখো! 🤞`;
+
+    // Init after DOM paint
+    requestAnimationFrame(() => setTimeout(initScratchCard, 50));
+  });
+
+  // ── Replay ──
+  document.getElementById("btn-replay").addEventListener("click", () => {
+    // Reset scratch canvas state for re-use
+    const canvas = document.getElementById("scratch-canvas");
+    canvas.style.opacity = "1";
+    canvas.style.display = "";
+    document.getElementById("scratch-progress").style.width = "0%";
+
+    showScreen("screen-start");
+    loadLeaderboard("lb-body");
+  });
+
+  // ── Screenshot ──
+  document.getElementById("btn-screenshot").addEventListener("click", downloadResult);
+
+  // ── Share ──
+  document.getElementById("btn-share").addEventListener("click", () => {
+    const url = buildShareURL();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => showToast("লিংক কপি হয়েছে! 📋"));
+    } else {
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = url; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast("লিংক কপি হয়েছে! 📋");
+    }
+  });
+}
+
+main();

@@ -1,108 +1,180 @@
+// ================================================
+//   EID SALAMI CALCULATOR — Admin Panel Logic
+//   admin.js
+// ================================================
 
-// ==================== FIREBASE CONFIG (SAME AS MAIN) ====================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// =====================================================
+// 🔥 FIREBASE CONFIG — Same as script.js
+// =====================================================
 const firebaseConfig = {
-  apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
-  authDomain: "eid-salami-calculator.firebaseapp.com",
-  projectId: "eid-salami-calculator",
-  storageBucket: "eid-salami-calculator.firebasestorage.app",
-  messagingSenderId: "1004762862713",
-  appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_PROJECT.firebaseapp.com",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId:             "YOUR_APP_ID"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const COL = "leaderboard";
 
-let allData = [];
-let currentSort = 'salami';
+// =====================================================
+// State
+// =====================================================
+let allData    = [];
+let sortMode   = "salami";  // "salami" | "latest"
+let searchTerm = "";
 
-// ==================== RENDER TABLE ====================
-function renderTable(filteredData) {
-    const tbody = document.getElementById('table-body');
-    tbody.innerHTML = '';
-    
-    filteredData.forEach(item => {
-        const tr = document.createElement('tr');
-        const timeStr = item.timestamp 
-            ? item.timestamp.toDate().toLocaleString('bn-BD', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              }) 
-            : '—';
-        
-        tr.innerHTML = `
-            <td>${item.name}</td>
-            <td style="color:#f4d03f;font-weight:bold;">${item.salami} টাকা</td>
-            <td style="font-family:monospace;font-size:0.9rem;">${item.ip}</td>
-            <td>${timeStr}</td>
-        `;
-        tbody.appendChild(tr);
+// =====================================================
+// Helpers
+// =====================================================
+function escapeHTML(str = "") {
+  return String(str).replace(/[&<>"']/g, c =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])
+  );
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("bn-BD", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
     });
+  } catch { return iso; }
 }
 
-// ==================== LOAD & REAL-TIME ====================
-function loadAdminData() {
-    db.collection("leaderboard").onSnapshot(snapshot => {
-        allData = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        filterTable();
-    });
+// =====================================================
+// Render Table
+// =====================================================
+function renderTable() {
+  const tbody = document.getElementById("admin-tbody");
+
+  // Filter by search
+  let filtered = allData.filter(d =>
+    !searchTerm ||
+    (d.username   || "").toLowerCase().includes(searchTerm) ||
+    (d.targetName || "").toLowerCase().includes(searchTerm)
+  );
+
+  // Sort
+  if (sortMode === "salami") {
+    filtered.sort((a, b) => (b.salami || 0) - (a.salami || 0));
+  } else {
+    filtered.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="admin-status">কোনো ডেটা পাওয়া যায়নি</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((d, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${escapeHTML(d.username   || "—")}</td>
+      <td>${escapeHTML(d.targetName || "—")}</td>
+      <td style="color:var(--gold);font-weight:700;">৳ ${d.salami || 0}</td>
+      <td style="font-size:0.78rem;color:var(--text-muted);">${escapeHTML(d.ip || d.uid || "—")}</td>
+      <td style="font-size:0.78rem;white-space:nowrap;">${formatDate(d.timestamp)}</td>
+    </tr>
+  `).join("");
 }
 
-// ==================== FILTER & SORT ====================
-function filterTable() {
-    const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
-    
-    let filtered = allData;
-    
-    if (searchTerm) {
-        filtered = allData.filter(item => 
-            item.name.toLowerCase().includes(searchTerm)
-        );
-    }
-    
-    if (currentSort === 'salami') {
-        filtered.sort((a, b) => b.salami - a.salami);
-    } else if (currentSort === 'latest') {
-        filtered.sort((a, b) => {
-            if (!a.timestamp || !b.timestamp) return 0;
-            return b.timestamp.toDate() - a.timestamp.toDate();
-        });
-    }
-    
-    renderTable(filtered);
+// =====================================================
+// Update Stats
+// =====================================================
+function updateStats() {
+  const total   = allData.length;
+  const highest = allData.reduce((m, d) => Math.max(m, d.salami || 0), 0);
+  const avg     = total
+    ? Math.round(allData.reduce((s, d) => s + (d.salami || 0), 0) / total)
+    : 0;
+
+  document.getElementById("stat-total").textContent   = total;
+  document.getElementById("stat-highest").textContent = `৳ ${highest}`;
+  document.getElementById("stat-avg").textContent     = `৳ ${avg}`;
+  document.getElementById("entry-count").textContent  = total;
 }
 
-function sortBySalami() {
-    currentSort = 'salami';
-    filterTable();
+// =====================================================
+// Real-time Listener
+// =====================================================
+function setupRealtimeListener() {
+  const q = query(collection(db, COL), orderBy("salami", "desc"));
+  onSnapshot(q, (snap) => {
+    allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    updateStats();
+    renderTable();
+  }, (err) => {
+    console.error("Snapshot error:", err);
+    document.getElementById("admin-tbody").innerHTML =
+      `<tr><td colspan="6" class="admin-status">Firebase এ সংযোগ হচ্ছে না। Config চেক করুন।</td></tr>`;
+  });
 }
 
-function sortByLatest() {
-    currentSort = 'latest';
-    filterTable();
+// =====================================================
+// Delete All
+// =====================================================
+async function deleteAll() {
+  const confirmed = window.confirm(
+    "⚠️ সত্যিই কি সব ডেটা মুছতে চাও?\n\nএই কাজ ফেরানো যাবে না!"
+  );
+  if (!confirmed) return;
+
+  try {
+    const snap = await getDocs(collection(db, COL));
+    const deletes = snap.docs.map(d => deleteDoc(doc(db, COL, d.id)));
+    await Promise.all(deletes);
+    allData = [];
+    updateStats();
+    renderTable();
+    alert("✅ সব ডেটা মুছে ফেলা হয়েছে।");
+  } catch (e) {
+    console.error("Delete error:", e);
+    alert("❌ মুছতে সমস্যা হয়েছে: " + e.message);
+  }
 }
 
-// ==================== DELETE ALL ====================
-async function deleteAllData() {
-    if (!confirm('⚠️ সব ডেটা মুছে ফেলতে চাও? এটি অপরিবর্তনীয়!')) return;
-    
-    const batch = db.batch();
-    const snap = await db.collection("leaderboard").get();
-    
-    snap.docs.forEach(doc => {
-        batch.delete(doc.ref);
-    });
-    
-    await batch.commit();
-    alert('✅ সব ডেটা মুছে ফেলা হয়েছে!');
-}
+// =====================================================
+// Event Listeners
+// =====================================================
+document.getElementById("search-input").addEventListener("input", (e) => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  renderTable();
+});
 
-// ==================== INIT ====================
-window.onload = () => {
-    loadAdminData();
-};
+document.getElementById("sort-salami").addEventListener("click", () => {
+  sortMode = "salami";
+  document.getElementById("sort-salami").classList.add("active");
+  document.getElementById("sort-latest").classList.remove("active");
+  renderTable();
+});
+
+document.getElementById("sort-latest").addEventListener("click", () => {
+  sortMode = "latest";
+  document.getElementById("sort-latest").classList.add("active");
+  document.getElementById("sort-salami").classList.remove("active");
+  renderTable();
+});
+
+document.getElementById("btn-delete-all").addEventListener("click", deleteAll);
+
+// =====================================================
+// Init
+// =====================================================
+setupRealtimeListener();
