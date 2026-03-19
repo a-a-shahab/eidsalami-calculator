@@ -9,7 +9,6 @@ const firebaseConfig = {
   appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -66,7 +65,6 @@ function filterTable() {
         );
     }
     
-    // Apply current sort
     if (currentSort === 'salami') {
         filtered.sort((a, b) => b.salami - a.salami);
     } else if (currentSort === 'latest') {

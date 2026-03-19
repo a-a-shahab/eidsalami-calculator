@@ -21,22 +21,36 @@ let salamiAmount = 0;
 let quizQuestions = [];
 let currentQIndex = 0;
 let userAnswers = [];
+let selectedMCQ = '';
 
-// Question Bank (ALL 15 Bangla questions exactly as required)
-const questionBank = [
-"বল তো আমার নাম কি?",                     // FIXED #1
-"তোমার সাথে আমার সম্পর্ক কি?",
-"তোমার সাথে কি আমার ছবি আছে? থাকলে ইনবক্সে দাও",
-"তোমার CG কত?",
-"তোমার সিজি কত?",
-"তোমার কি মনে হয় আমার GF/BF আছে?",
-"আমি কোন ক্লাসে পড়ি?",
-"আমি কি বেশি কথা বলি?",
-"সিজি বল",
-"আমি কি তোমার কাছে ভালো মানুষ?",
-"আমার সাথে প্রথম দেখা কেমন ছিল?", 
-"আমি কি সিরিয়াস টাইপ মানুষ?",
-"আমার সবচেয়ে ভালো দিক কি?" 
+// ==================== QUESTION LIST (1 Short + 5 MCQ) ====================
+const questionList = [
+    { text: "বল তো আমার নাম কি?", type: "short" },
+    { 
+        text: "তোমার সাথে আমার সম্পর্ক কি?", 
+        type: "mcq", 
+        options: ["জুনিয়র", "বন্ধু", "অনলাইন বন্ধু", "চিনি না"] 
+    },
+    { 
+        text: "তোমার সাথে কি আমার ছবি আছে?", 
+        type: "mcq", 
+        options: ["আছে", "নাই"] 
+    },
+    { 
+        text: "তোমার CG কত?", 
+        type: "mcq", 
+        options: ["৩ এর নিচে", "৩-৩.৫", "৩.৫-৩.৭৫", "৩.৭৫+"] 
+    },
+    { 
+        text: "তুমি আমাকে কি মনে করো?", 
+        type: "mcq", 
+        options: ["বলদ সিনিয়র", "স্মার্ট", "ভাই আপনি সেরা"] 
+    },
+    { 
+        text: "তোমার কি মনে হয় আমার GF/BF আছে?", 
+        type: "mcq", 
+        options: ["আছে", "নাই"] 
+    }
 ];
 
 // ==================== UTILITIES ====================
@@ -55,7 +69,6 @@ async function getIP() {
         const data = await res.json();
         return data.ip;
     } catch (e) {
-        // Fallback unique ID
         let uid = localStorage.getItem('eid_uid');
         if (!uid) {
             uid = 'uid_' + Date.now() + Math.random().toString(36).substr(2, 9);
@@ -91,7 +104,7 @@ async function saveToLeaderboard(name, salami, ip) {
     }
 }
 
-async function loadLeaderboard(isFloating = false) {
+async function loadLeaderboard(containerId) {
     const q = db.collection("leaderboard")
         .orderBy("salami", "desc")
         .limit(10);
@@ -102,10 +115,7 @@ async function loadLeaderboard(isFloating = false) {
         return { name: d.name, salami: d.salami };
     });
     
-    const container = isFloating 
-        ? document.getElementById('floating-lb-list')
-        : document.getElementById('leaderboard-list');
-    
+    const container = document.getElementById(containerId);
     container.innerHTML = '';
     
     list.forEach((item, i) => {
@@ -119,11 +129,19 @@ async function loadLeaderboard(isFloating = false) {
     });
 }
 
+// ==================== MODAL FUNCTIONS ====================
+function showLeaderboardModal() {
+    loadLeaderboard('modal-leaderboard-list');
+    document.getElementById('lb-modal').classList.add('active');
+}
+
+function hideLeaderboardModal() {
+    document.getElementById('lb-modal').classList.remove('active');
+}
+
 // ==================== APP FLOW ====================
 async function initApp() {
     userIP = await getIP();
-    loadLeaderboard();
-    loadLeaderboard(true); // floating
     
     // Check URL params for direct result
     const params = new URLSearchParams(window.location.search);
@@ -149,12 +167,15 @@ function saveName() {
 }
 
 function startQuiz() {
-    // Select questions: 1 fixed + 4 random from remaining 14
-    const others = shuffle(questionBank.slice(1)).slice(0, 4);
-    quizQuestions = [questionBank[0], ...others];
+    // Fixed short question + 4 random MCQ
+    quizQuestions = [questionList[0]];
+    const mcqs = shuffle(questionList.slice(1)).slice(0, 4);
+    quizQuestions = quizQuestions.concat(mcqs);
+    
     currentQIndex = 0;
     userAnswers = [];
     correctNameFlag = false;
+    selectedMCQ = '';
     
     document.getElementById('quiz-screen').classList.add('active');
     loadQuestion();
@@ -162,15 +183,51 @@ function startQuiz() {
 
 function loadQuestion() {
     document.getElementById('q-number').textContent = currentQIndex + 1;
-    document.getElementById('question-text').textContent = quizQuestions[currentQIndex];
-    document.getElementById('answer-input').value = '';
+    const q = quizQuestions[currentQIndex];
+    document.getElementById('question-text').textContent = q.text;
+    
+    const input = document.getElementById('answer-input');
+    const optionsDiv = document.getElementById('options-container');
+    
+    if (q.type === "short") {
+        input.style.display = 'block';
+        optionsDiv.style.display = 'none';
+        input.value = '';
+        document.getElementById('next-btn').style.display = 'block';
+    } else {
+        input.style.display = 'none';
+        optionsDiv.style.display = 'flex';
+        optionsDiv.innerHTML = '';
+        document.getElementById('next-btn').style.display = 'none';
+        
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'mcq-btn';
+            btn.textContent = opt;
+            btn.onclick = () => selectMCQ(opt);
+            optionsDiv.appendChild(btn);
+        });
+    }
+}
+
+function selectMCQ(answer) {
+    selectedMCQ = answer;
+    nextQuestion();
 }
 
 function nextQuestion() {
-    const answer = document.getElementById('answer-input').value.trim();
+    const q = quizQuestions[currentQIndex];
+    let answer = '';
+    
+    if (q.type === "short") {
+        answer = document.getElementById('answer-input').value.trim();
+    } else {
+        answer = selectedMCQ;
+    }
+    
     userAnswers.push(answer);
     
-    // Check only first question (fixed)
+    // Check only first question
     if (currentQIndex === 0) {
         const lower = answer.toLowerCase();
         if (lower.includes('shahab') || lower.includes('sahab') || answer.includes('সাহাব')) {
@@ -179,6 +236,7 @@ function nextQuestion() {
     }
     
     currentQIndex++;
+    selectedMCQ = '';
     
     if (currentQIndex < 5) {
         loadQuestion();
@@ -190,28 +248,22 @@ function nextQuestion() {
 function finishQuiz() {
     document.getElementById('quiz-screen').classList.remove('active');
     
-    // Calculate salami
     if (correctNameFlag) {
         salamiAmount = Math.floor(Math.random() * 26) + 1;
     } else {
         salamiAmount = Math.floor(Math.random() * 120) + 2;
     }
     
-    // Save to DB
     saveToLeaderboard(userName, salamiAmount, userIP);
-    
-    // Show result
     showResultScreen();
 }
 
 function showResultScreen(isShared = false) {
     document.getElementById('result-screen').classList.add('active');
-    document.getElementById('floating-lb').style.display = 'none';
     
     document.getElementById('result-name').textContent = userName;
     document.getElementById('result-salami').textContent = salamiAmount;
     
-    // Confetti
     confetti({
         particleCount: 200,
         spread: 90,
@@ -225,11 +277,6 @@ function showResultScreen(isShared = false) {
             origin: { x: 0.1, y: 0.7 }
         });
     }, 300);
-    
-    // Refresh leaderboard
-    loadLeaderboard();
-    loadLeaderboard(true);
-    
 }
 
 function takeScreenshot() {
@@ -263,7 +310,8 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         const activeScreen = document.querySelector('.screen.active');
         if (activeScreen && activeScreen.id === 'quiz-screen') {
-            nextQuestion();
+            const q = quizQuestions[currentQIndex];
+            if (q.type === "short") nextQuestion();
         } else if (activeScreen && activeScreen.id === 'name-screen') {
             saveName();
         }

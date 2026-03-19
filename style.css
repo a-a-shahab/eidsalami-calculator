@@ -132,14 +132,6 @@ h1 {
     margin: 20px 0;
 }
 
-.leaderboard {
-    margin-top: 40px;
-    width: 100%;
-    background: rgba(255,255,255,0.1);
-    border-radius: 16px;
-    padding: 20px;
-}
-
 .lb-list {
     display: flex;
     flex-direction: column;
@@ -156,26 +148,68 @@ h1 {
     font-size: 1.05rem;
 }
 
-.floating-lb {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(10, 61, 42, 0.95);
+/* MCQ */
+.mcq-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 420px;
+}
+
+.mcq-btn {
+    padding: 18px;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid #f4d03f88;
+    color: #f4e8c1;
     border-radius: 16px;
-    padding: 16px;
-    width: 280px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    z-index: 100;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
 }
 
-.lb-list-small {
-    max-height: 220px;
-    overflow-y: auto;
+.mcq-btn:hover {
+    background: #f4d03f;
+    color: #0a3d2a;
+    transform: scale(1.03);
 }
 
-.lb-list-small .lb-item {
-    font-size: 0.95rem;
-    padding: 8px 14px;
+/* MODAL */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, #0a3d2a, #1a6b4a);
+    padding: 30px;
+    border-radius: 24px;
+    max-width: 520px;
+    width: 90%;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+.close {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 2.5rem;
+    color: #f4d03f;
+    cursor: pointer;
 }
 
 .progress {

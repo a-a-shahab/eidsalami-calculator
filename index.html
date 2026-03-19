@@ -19,7 +19,8 @@
         <!-- HEADER -->
         <header>
             <h1>ঈদ সালামি ক্যালকুলেটর 💸</h1>
-            <p class="subtitle"> তোমার সালামি বুঝে নাও 🎉</p>
+            <p class="subtitle">তোমার সালামি বুঝে নাও 🎉</p>
+            <button onclick="showLeaderboardModal()" class="btn secondary" style="margin-top:15px;">🏆 লিডারবোর্ড দেখুন</button>
         </header>
 
         <!-- LANDING SCREEN -->
@@ -42,7 +43,8 @@
             <div class="progress">প্রশ্ন <span id="q-number">1</span>/5</div>
             <h2 id="question-text"></h2>
             <input type="text" id="answer-input" placeholder="উত্তর লিখো..." class="input-field">
-            <button onclick="nextQuestion()" class="btn primary">পরবর্তী →</button>
+            <div id="options-container" class="mcq-options"></div>
+            <button onclick="nextQuestion()" class="btn primary" id="next-btn">পরবর্তী →</button>
         </div>
 
         <!-- RESULT SCREEN -->
@@ -62,23 +64,21 @@
                     <button onclick="restartApp()" class="btn primary">আবার খেলো</button>
                 </div>
             </div>
-            
-            <!-- LEADERBOARD -->
-            <div class="leaderboard">
-                <h3>🏆 Top Salami </h3>
-                <div id="leaderboard-list" class="lb-list"></div>
-            </div>
         </div>
 
-        <!-- FLOATING LEADERBOARD (visible on all screens except result) -->
-        <div id="floating-lb" class="floating-lb">
-            <h4>🏆 </h4>
-            <div id="floating-lb-list" class="lb-list-small"></div>
+        <!-- LEADERBOARD MODAL -->
+        <div id="lb-modal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="hideLeaderboardModal()">×</span>
+                <h3 style="color:#f4d03f;margin-bottom:20px;">🏆 লিডারবোর্ড (টপ ১০)</h3>
+                <div id="modal-leaderboard-list" class="lb-list"></div>
+                <button onclick="hideLeaderboardModal()" class="btn primary" style="margin-top:20px;width:100%;">বন্ধ করো</button>
+            </div>
         </div>
     </div>
 
     <footer>
-        <p> Eid Mubarak</p>
+        <p>Eid Mubarak</p>
     </footer>
 
     <script src="script.js"></script>
