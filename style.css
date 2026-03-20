@@ -163,6 +163,10 @@ input {
     touch-action: none;
 }
 
+.scratch-card-wrapper {
+    position: relative;
+}
+
 .scratch-card-wrapper h2 {
     color: #ffd700;
     margin-bottom: 10px;
@@ -189,11 +193,13 @@ input {
     justify-content: center;
     z-index: 10;
     opacity: 0;
+    pointer-events: none;
     transition: all 0.8s ease;
 }
 
 .celebration-overlay:not(.hidden) {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .eid-mubarak {
