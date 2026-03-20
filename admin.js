@@ -10,6 +10,7 @@ const firebaseConfig = {
 let db;
 let allData = [];
 let currentSort = 'salami';
+let adminUnsubscribe = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     firebase.initializeApp(firebaseConfig);
@@ -18,19 +19,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initAdmin() {
+    subscribeAdmin();
+}
+
+function subscribeAdmin() {
+    if (adminUnsubscribe) adminUnsubscribe();
     const q = db.collection('leaderboard');
-    q.onSnapshot(snapshot => {
-        allData = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            allData.push({
-                id: doc.id,
-                ...data,
-                timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+    adminUnsubscribe = q.onSnapshot(
+        snapshot => {
+            allData = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                allData.push({
+                    id: doc.id,
+                    ...data,
+                    timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+                });
             });
-        });
-        renderAdminTable();
-    });
+            renderAdminTable();
+        },
+        err => {
+            console.error('Admin snapshot error:', err);
+            setTimeout(subscribeAdmin, 3000);
+        }
+    );
 }
 
 function renderAdminTable(filteredData = null) {

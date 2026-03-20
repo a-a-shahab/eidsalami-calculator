@@ -52,7 +52,11 @@ async function saveToLeaderboard() {
         } else {
             await docRef.set({ username: userName, targetName, salami: salamiAmount, ip, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         }
-    } catch (e) {}
+        // Force refresh in case onSnapshot is slow
+        refreshLeaderboard();
+    } catch (e) {
+        console.error('Save error:', e);
+    }
 }
 
 function checkForSharedLink() {
@@ -103,9 +107,8 @@ function initScratchCard() {
     canvas = document.getElementById('scratch-canvas');
     const container = canvas.parentElement;
 
-    const rect = container.getBoundingClientRect();
-    canvas.width = rect.width || 380;
-    canvas.height = rect.height || 220;
+    canvas.width = container.offsetWidth || 380;
+    canvas.height = container.offsetHeight || 220;
 
     ctx = canvas.getContext('2d');
     ctx.fillStyle = '#e8b923';
@@ -130,18 +133,10 @@ function initScratchCard() {
 
 function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
     if (e.touches) {
-        return {
-            x: (e.touches[0].clientX - rect.left) * scaleX,
-            y: (e.touches[0].clientY - rect.top) * scaleY
-        };
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
     }
-    return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
 let isDrawing = false, lastX = 0, lastY = 0;
@@ -237,21 +232,47 @@ function restartGame() {
 
 // ================== LEADERBOARD ==================
 let leaderboardSnapshot = null;
+let leaderboardUnsubscribe = null;
 
 function initFirebaseListeners() {
     if (!db) return;
+    subscribeLeaderboard();
+}
+
+function subscribeLeaderboard() {
+    if (leaderboardUnsubscribe) leaderboardUnsubscribe();
     const q = db.collection('leaderboard').orderBy('salami', 'desc').limit(10);
-    q.onSnapshot(snap => {
+    leaderboardUnsubscribe = q.onSnapshot(
+        snap => {
+            leaderboardSnapshot = snap;
+            renderLeaderboard();
+        },
+        err => {
+            console.error('Leaderboard listener error:', err);
+            setTimeout(subscribeLeaderboard, 3000);
+        }
+    );
+}
+
+async function refreshLeaderboard() {
+    if (!db) return;
+    try {
+        const snap = await db.collection('leaderboard').orderBy('salami', 'desc').limit(10).get();
         leaderboardSnapshot = snap;
         renderLeaderboard();
-    });
+    } catch (e) {
+        console.error('Leaderboard refresh error:', e);
+    }
 }
 
 function renderLeaderboard() {
     const container = document.getElementById('leaderboard-list');
+    if (!container) return;
     container.innerHTML = '';
-    if (!leaderboardSnapshot) return;
-    
+    if (!leaderboardSnapshot || leaderboardSnapshot.empty) {
+        container.innerHTML = '<div class="leaderboard-item" style="justify-content:center;opacity:0.7">কেউ এখনো খেলেনি 🕌</div>';
+        return;
+    }
     let rank = 1;
     leaderboardSnapshot.forEach(doc => {
         const d = doc.data();
