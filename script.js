@@ -103,8 +103,9 @@ function initScratchCard() {
     canvas = document.getElementById('scratch-canvas');
     const container = canvas.parentElement;
 
-    canvas.width = container.offsetWidth || 380;
-    canvas.height = container.offsetHeight || 220;
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width || 380;
+    canvas.height = rect.height || 220;
 
     ctx = canvas.getContext('2d');
     ctx.fillStyle = '#e8b923';
@@ -129,10 +130,18 @@ function initScratchCard() {
 
 function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     if (e.touches) {
-        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        return {
+            x: (e.touches[0].clientX - rect.left) * scaleX,
+            y: (e.touches[0].clientY - rect.top) * scaleY
+        };
     }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
 }
 
 let isDrawing = false, lastX = 0, lastY = 0;
