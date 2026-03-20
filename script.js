@@ -52,11 +52,7 @@ async function saveToLeaderboard() {
         } else {
             await docRef.set({ username: userName, targetName, salami: salamiAmount, ip, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         }
-        // Force refresh in case onSnapshot is slow
-        refreshLeaderboard();
-    } catch (e) {
-        console.error('Save error:', e);
-    }
+    } catch (e) {}
 }
 
 function checkForSharedLink() {
@@ -231,58 +227,35 @@ function restartGame() {
 }
 
 // ================== LEADERBOARD ==================
-let leaderboardSnapshot = null;
-let leaderboardUnsubscribe = null;
-
 function initFirebaseListeners() {
     if (!db) return;
-    subscribeLeaderboard();
-}
-
-function subscribeLeaderboard() {
-    if (leaderboardUnsubscribe) leaderboardUnsubscribe();
-    const q = db.collection('leaderboard').orderBy('salami', 'desc').limit(10);
-    leaderboardUnsubscribe = q.onSnapshot(
-        snap => {
-            leaderboardSnapshot = snap;
-            renderLeaderboard();
-        },
-        err => {
-            console.error('Leaderboard listener error:', err);
-            setTimeout(subscribeLeaderboard, 3000);
-        }
+    // Removed orderBy - requires a Firestore index, causes silent failures without one.
+    // Sorting is done client-side so real-time listener always works.
+    db.collection('leaderboard').onSnapshot(
+        function(snap) { renderLeaderboard(snap); },
+        function(err) { console.error('Leaderboard error:', err); }
     );
 }
 
-async function refreshLeaderboard() {
-    if (!db) return;
-    try {
-        const snap = await db.collection('leaderboard').orderBy('salami', 'desc').limit(10).get();
-        leaderboardSnapshot = snap;
-        renderLeaderboard();
-    } catch (e) {
-        console.error('Leaderboard refresh error:', e);
-    }
-}
-
-function renderLeaderboard() {
-    const container = document.getElementById('leaderboard-list');
+function renderLeaderboard(snap) {
+    var container = document.getElementById('leaderboard-list');
     if (!container) return;
     container.innerHTML = '';
-    if (!leaderboardSnapshot || leaderboardSnapshot.empty) {
+    if (!snap || snap.empty) {
         container.innerHTML = '<div class="leaderboard-item" style="justify-content:center;opacity:0.7">কেউ এখনো খেলেনি 🕌</div>';
         return;
     }
-    let rank = 1;
-    leaderboardSnapshot.forEach(doc => {
-        const d = doc.data();
-        const div = document.createElement('div');
+    var all = [];
+    snap.forEach(function(doc) { all.push(doc.data()); });
+    all.sort(function(a, b) { return b.salami - a.salami; });
+    all.slice(0, 10).forEach(function(d, i) {
+        var rank = i + 1;
+        var medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑';
+        var div = document.createElement('div');
         div.className = 'leaderboard-item';
-        div.innerHTML = `
-            <span>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑'} ${d.username || 'Anonymous'}</span>
-            <span><strong>${d.salami}</strong> টাকা</span>
-        `;
+        div.innerHTML =
+            '<span>' + medal + ' ' + (d.username || 'Anonymous') + '</span>' +
+            '<span><strong>' + d.salami + '</strong> টাকা</span>';
         container.appendChild(div);
-        rank++;
     });
 }
