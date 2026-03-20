@@ -1,80 +1,52 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel — ঈদ সালামি</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - EidSalamiCalculator</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <style>
+        body { background: #111; color: #ffd700; }
+        .admin-container { max-width: 1100px; margin: 30px auto; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.1); }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #444; }
+        th { background: #006400; }
+        .search-box { padding: 14px; width: 100%; margin-bottom: 20px; font-size: 1.1rem; }
+        .btn-danger { background: #c00; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; }
+        .admin-header { text-align: center; margin-bottom: 30px; font-size: 2rem; }
+    </style>
 </head>
-<body class="admin-body">
-
-  <div style="max-width:900px;margin:0 auto;">
-
-    <div class="admin-header">
-      <h1>⚙️ Admin Panel
-        <span class="live-badge">
-          <span class="live-dot"></span> Live
-        </span>
-      </h1>
-      <p style="color:var(--text-muted);font-size:0.85rem;margin-top:6px;">Real-time Firestore — ঈদ সালামি ক্যালকুলেটর</p>
-      <a href="index.html" style="color:var(--gold-light);font-size:0.8rem;text-decoration:none;opacity:0.7;">← মূল পেজে যাও</a>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">🔧 EidSalamiCalculator Admin Panel</div>
+        
+        <input type="text" id="search-input" class="search-box glass" placeholder="নাম দিয়ে সার্চ করুন..." onkeyup="filterTable()">
+        
+        <div style="margin-bottom: 15px;">
+            <button onclick="sortTable('salami')" class="primary-btn" style="width:auto; margin-right:10px;">Highest Salami</button>
+            <button onclick="sortTable('time')" class="primary-btn" style="width:auto;">Latest First</button>
+        </div>
+        
+        <table id="admin-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Target</th>
+                    <th>Salami (৳)</th>
+                    <th>IP</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody id="admin-tbody"></tbody>
+        </table>
+        
+        <div style="text-align:center; margin-top:30px;">
+            <button onclick="deleteAllData()" class="btn-danger">🗑️ Delete All Data</button>
+        </div>
     </div>
 
-    <!-- Stats Row -->
-    <div class="admin-stats">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-total">—</div>
-        <div class="stat-label">মোট ব্যবহারকারী</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-highest">—</div>
-        <div class="stat-label">সর্বোচ্চ সালামি</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-avg">—</div>
-        <div class="stat-label">গড় সালামি</div>
-      </div>
-    </div>
-
-    <!-- Controls -->
-    <div class="admin-controls">
-      <input
-        type="text"
-        class="admin-search"
-        id="search-input"
-        placeholder="🔍 নাম দিয়ে খোঁজো..."
-      />
-      <button class="sort-btn active" id="sort-salami">↓ সর্বোচ্চ সালামি</button>
-      <button class="sort-btn" id="sort-latest">🕐 সর্বশেষ</button>
-      <button class="delete-btn" id="btn-delete-all">🗑 সব মুছে ফেলো</button>
-    </div>
-
-    <!-- Table -->
-    <div class="admin-table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>নাম</th>
-            <th>টার্গেট নাম</th>
-            <th>সালামি (৳)</th>
-            <th>IP</th>
-            <th>সময়</th>
-          </tr>
-        </thead>
-        <tbody id="admin-tbody">
-          <tr><td colspan="6" class="admin-status">লোড হচ্ছে...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <p style="color:var(--text-muted);font-size:0.75rem;text-align:center;margin-top:16px;">
-      ডেটা রিয়েল-টাইমে আপডেট হচ্ছে। মোট এন্ট্রি: <span id="entry-count">—</span>
-    </p>
-
-  </div>
-
-  <script type="module" src="admin.js"></script>
+    <script src="admin.js"></script>
 </body>
 </html>

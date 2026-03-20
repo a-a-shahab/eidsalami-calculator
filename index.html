@@ -1,134 +1,90 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ঈদ সালামি স্ক্র্যাচ কার্ড 💸</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EidSalamiCalculator – Scratch Card Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 </head>
 <body>
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <h1>ঈদ সালামি স্ক্র্যাচ কার্ড 💸</h1>
+            <p class="subtitle">ঈদের সালামি জিতুন – স্ক্র্যাচ করে দেখুন!</p>
+        </header>
 
-  <!-- Decorative background orbs -->
-  <div class="bg-orb orb1"></div>
-  <div class="bg-orb orb2"></div>
-  <div class="bg-orb orb3"></div>
-  <div class="stars" id="stars"></div>
-
-  <div class="app-wrapper">
-
-    <!-- ===== SCREEN 1: START ===== -->
-    <div class="screen active" id="screen-start">
-      <div class="moon-deco">🌙</div>
-      <div class="lantern-row">🏮 🏮 🏮</div>
-      <h1 class="main-title">ঈদ সালামি<br/><span class="gold-text">স্ক্র্যাচ কার্ড</span></h1>
-      <p class="subtitle">স্ক্র্যাচ করো, সালামি জানো! 💸</p>
-      <div class="card-preview-art">
-        <div class="mini-card">
-          <div class="mini-scratch"></div>
-          <span class="money-icon">💰</span>
+        <!-- SCREENS -->
+        <div id="start-screen" class="screen active">
+            <div class="card glass">
+                <div class="emoji">🎉</div>
+                <h2>স্বাগতম!</h2>
+                <button onclick="startGame()" class="primary-btn">শুরু করো</button>
+            </div>
         </div>
-      </div>
-      <button class="btn-primary pulse" id="btn-start">শুরু করো ✨</button>
-      <div class="leaderboard-teaser" id="leaderboard-section">
-        <h2 class="section-title">🏆 শীর্ষ সালামি প্রাপক</h2>
-        <div class="lb-table-wrap">
-          <table class="lb-table">
-            <thead>
-              <tr><th>#</th><th>নাম</th><th>সালামি</th></tr>
-            </thead>
-            <tbody id="lb-body">
-              <tr><td colspan="3" class="lb-loading">লোড হচ্ছে...</td></tr>
-            </tbody>
-          </table>
+
+        <div id="name-screen" class="screen">
+            <div class="card glass">
+                <h2>নাম দিন</h2>
+                <div class="form-group">
+                    <label>তোমার নাম কি?</label>
+                    <input type="text" id="user-name" placeholder="যেমন: রাহিম" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label>যার থেকে সালামি চাচ্ছো তার নাম কি?</label>
+                    <input type="text" id="target-name" placeholder="যেমন: সাহাব" maxlength="30">
+                </div>
+                <p id="name-error" class="error-message"></p>
+                <button onclick="submitNames()" class="primary-btn">পরবর্তী →</button>
+            </div>
         </div>
-      </div>
+
+        <div id="scratch-screen" class="screen">
+            <div class="card glass scratch-card-wrapper">
+                <h2>স্ক্র্যাচ করো! ✨</h2>
+                <div class="scratch-container">
+                    <div id="prize-layer" class="prize-layer">
+                        <div class="prize-text">
+                            তুমি পাচ্ছো:<br>
+                            <span id="scratch-salami" class="big-amount">??</span> টাকা 💰
+                        </div>
+                    </div>
+                    <canvas id="scratch-canvas" width="380" height="220" class="scratch-canvas"></canvas>
+                </div>
+                <button id="continue-btn" onclick="goToResult()" class="primary-btn hidden">ফলাফল দেখো 🎉</button>
+                <p class="hint">মাউস বা আঙ্গুল দিয়ে স্ক্র্যাচ করুন (৪০%+)</p>
+            </div>
+        </div>
+
+        <div id="result-screen" class="screen">
+            <div id="result-card" class="result-card glass">
+                <h1 id="congrats-name" class="congrats">Rahim Congratulations!! 🎉</h1>
+                <p id="target-text" class="target-msg">Shahab এর থেকে সালামি বুঝে নাও 💰</p>
+                <div class="salami-result">
+                    <span class="label">তুমি পাচ্ছো:</span>
+                    <span id="final-salami" class="final-amount">50</span>
+                    <span class="taka">টাকা</span>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="downloadScreenshot()" class="action-btn">📸 Download Result</button>
+                <button onclick="shareResult()" class="action-btn">🔗 Share with Friends</button>
+                <button onclick="restartGame()" class="action-btn secondary">নতুন স্ক্র্যাচ</button>
+            </div>
+        </div>
+
+        <!-- LEADERBOARD -->
+        <div class="leaderboard-section glass">
+            <h2>🏆 টপ ১০ লিডারবোর্ড</h2>
+            <div id="leaderboard-list" class="leaderboard-list"></div>
+        </div>
     </div>
 
-    <!-- ===== SCREEN 2: NAME INPUT ===== -->
-    <div class="screen" id="screen-names">
-      <div class="screen-header">
-        <span class="back-btn" id="btn-back-names">← ফিরে যাও</span>
-        <h2 class="screen-title">তোমার পরিচয় দাও</h2>
-      </div>
-      <div class="input-card glass-card">
-        <div class="input-group">
-          <label for="user-name">👤 তোমার নাম কি?</label>
-          <input type="text" id="user-name" placeholder="তোমার নাম লিখো..." maxlength="40" />
-        </div>
-        <div class="input-group">
-          <label for="target-name">🎯 যার থেকে সালামি চাচ্ছো তার নাম?</label>
-          <input type="text" id="target-name" placeholder="তার নাম লিখো..." maxlength="40" />
-        </div>
-        <div class="error-msg" id="name-error" style="display:none">দয়া করে সব ঘর পূরণ করো ❗</div>
-        <button class="btn-primary" id="btn-proceed">পরবর্তী ➡</button>
-      </div>
-    </div>
-
-    <!-- ===== SCREEN 3: SCRATCH CARD ===== -->
-    <div class="screen" id="screen-scratch">
-      <div class="screen-header">
-        <h2 class="screen-title">স্ক্র্যাচ করো!</h2>
-        <p class="screen-sub" id="scratch-prompt">কার্ডে আঙুল বুলাও 🤞</p>
-      </div>
-      <div class="scratch-wrapper">
-        <div class="scratch-card glass-card" id="scratch-card">
-          <!-- Hidden result underneath -->
-          <div class="scratch-reveal" id="scratch-reveal">
-            <div class="reveal-emoji">💰</div>
-            <div class="reveal-amount" id="reveal-amount">৳ 00</div>
-            <div class="reveal-label">তোমার সালামি!</div>
-          </div>
-          <!-- Canvas overlay -->
-          <canvas id="scratch-canvas"></canvas>
-        </div>
-        <p class="hint-text">👆 কার্ডে ঘষো বা টাচ করো</p>
-        <div class="scratch-progress-wrap">
-          <div class="scratch-progress-bar" id="scratch-progress"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== SCREEN 4: RESULT ===== -->
-    <div class="screen" id="screen-result">
-      <div class="result-card glass-card" id="result-card">
-        <div class="result-emoji">🎉</div>
-        <h2 class="result-congrats" id="result-congrats"></h2>
-        <p class="result-target" id="result-target"></p>
-        <div class="result-amount-box">
-          <span class="result-currency">৳</span>
-          <span class="result-amount" id="result-amount">0</span>
-          <span class="result-taka">টাকা</span>
-        </div>
-        <div class="result-actions">
-          <button class="btn-secondary" id="btn-screenshot">📸 Download Result</button>
-          <button class="btn-secondary" id="btn-share">🔗 শেয়ার করো</button>
-          <button class="btn-primary" id="btn-replay">🔄 আবার খেলো</button>
-        </div>
-      </div>
-      <div class="leaderboard-teaser mt-lg" id="result-lb-section">
-        <h2 class="section-title">🏆 লিডারবোর্ড</h2>
-        <div class="lb-table-wrap">
-          <table class="lb-table">
-            <thead>
-              <tr><th>#</th><th>নাম</th><th>সালামি</th></tr>
-            </thead>
-            <tbody id="result-lb-body">
-              <tr><td colspan="3" class="lb-loading">লোড হচ্ছে...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- SHARE COPIED TOAST -->
-    <div class="toast" id="toast">লিংক কপি হয়েছে! 📋</div>
-
-  </div><!-- end app-wrapper -->
-
-  <!-- Firebase + App Script -->
-  <script type="module" src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

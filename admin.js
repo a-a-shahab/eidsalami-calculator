@@ -1,180 +1,116 @@
-// ================================================
-//   EID SALAMI CALCULATOR — Admin Panel Logic
-//   admin.js
-// ================================================
+// ============== FIREBASE CONFIG ==============
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  getDocs,
-  deleteDoc,
-  doc,
-  query,
-  orderBy,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-// =====================================================
-// 🔥 FIREBASE CONFIG — Same as script.js
-// =====================================================
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
+  authDomain: "eid-salami-calculator.firebaseapp.com",
+  projectId: "eid-salami-calculator",
+  storageBucket: "eid-salami-calculator.firebasestorage.app",
+  messagingSenderId: "1004762862713",
+  appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
-const COL = "leaderboard";
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-// =====================================================
-// State
-// =====================================================
-let allData    = [];
-let sortMode   = "salami";  // "salami" | "latest"
-let searchTerm = "";
+let allData = [];
+let currentSort = 'salami';
 
-// =====================================================
-// Helpers
-// =====================================================
-function escapeHTML(str = "") {
-  return String(str).replace(/[&<>"']/g, c =>
-    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])
-  );
-}
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString("bn-BD", {
-      day: "2-digit", month: "short", year: "numeric",
-      hour: "2-digit", minute: "2-digit"
+function initAdmin() {
+    const q = db.collection('leaderboard');
+    
+    q.onSnapshot(snapshot => {
+        allData = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            allData.push({
+                id: doc.id,
+                ...data,
+                timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+            });
+        });
+        renderAdminTable();
     });
-  } catch { return iso; }
 }
 
-// =====================================================
-// Render Table
-// =====================================================
-function renderTable() {
-  const tbody = document.getElementById("admin-tbody");
-
-  // Filter by search
-  let filtered = allData.filter(d =>
-    !searchTerm ||
-    (d.username   || "").toLowerCase().includes(searchTerm) ||
-    (d.targetName || "").toLowerCase().includes(searchTerm)
-  );
-
-  // Sort
-  if (sortMode === "salami") {
-    filtered.sort((a, b) => (b.salami || 0) - (a.salami || 0));
-  } else {
-    filtered.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
-  }
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="admin-status">কোনো ডেটা পাওয়া যায়নি</td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = filtered.map((d, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${escapeHTML(d.username   || "—")}</td>
-      <td>${escapeHTML(d.targetName || "—")}</td>
-      <td style="color:var(--gold);font-weight:700;">৳ ${d.salami || 0}</td>
-      <td style="font-size:0.78rem;color:var(--text-muted);">${escapeHTML(d.ip || d.uid || "—")}</td>
-      <td style="font-size:0.78rem;white-space:nowrap;">${formatDate(d.timestamp)}</td>
-    </tr>
-  `).join("");
+function renderAdminTable(filteredData = null) {
+    const tbody = document.getElementById('admin-tbody');
+    tbody.innerHTML = '';
+    
+    let dataToShow = filteredData || [...allData];
+    
+    // Sort
+    if (currentSort === 'salami') {
+        dataToShow.sort((a, b) => b.salami - a.salami);
+    } else if (currentSort === 'time') {
+        dataToShow.sort((a, b) => b.timestamp - a.timestamp);
+    }
+    
+    dataToShow.forEach(item => {
+        const row = document.createElement('tr');
+        const timeStr = item.timestamp.toLocaleString('bn-BD', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        row.innerHTML = `
+            <td>${item.username}</td>
+            <td>${item.targetName}</td>
+            <td><strong>${item.salami}</strong></td>
+            <td>${item.ip}</td>
+            <td>${timeStr}</td>
+        `;
+        tbody.appendChild(row);
+    });
 }
 
-// =====================================================
-// Update Stats
-// =====================================================
-function updateStats() {
-  const total   = allData.length;
-  const highest = allData.reduce((m, d) => Math.max(m, d.salami || 0), 0);
-  const avg     = total
-    ? Math.round(allData.reduce((s, d) => s + (d.salami || 0), 0) / total)
-    : 0;
-
-  document.getElementById("stat-total").textContent   = total;
-  document.getElementById("stat-highest").textContent = `৳ ${highest}`;
-  document.getElementById("stat-avg").textContent     = `৳ ${avg}`;
-  document.getElementById("entry-count").textContent  = total;
+function filterTable() {
+    const term = document.getElementById('search-input').value.toLowerCase().trim();
+    if (!term) {
+        renderAdminTable();
+        return;
+    }
+    
+    const filtered = allData.filter(item => 
+        item.username.toLowerCase().includes(term) ||
+        item.targetName.toLowerCase().includes(term)
+    );
+    renderAdminTable(filtered);
 }
 
-// =====================================================
-// Real-time Listener
-// =====================================================
-function setupRealtimeListener() {
-  const q = query(collection(db, COL), orderBy("salami", "desc"));
-  onSnapshot(q, (snap) => {
-    allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    updateStats();
-    renderTable();
-  }, (err) => {
-    console.error("Snapshot error:", err);
-    document.getElementById("admin-tbody").innerHTML =
-      `<tr><td colspan="6" class="admin-status">Firebase এ সংযোগ হচ্ছে না। Config চেক করুন।</td></tr>`;
-  });
+function sortTable(mode) {
+    currentSort = mode;
+    renderAdminTable();
 }
 
-// =====================================================
-// Delete All
-// =====================================================
-async function deleteAll() {
-  const confirmed = window.confirm(
-    "⚠️ সত্যিই কি সব ডেটা মুছতে চাও?\n\nএই কাজ ফেরানো যাবে না!"
-  );
-  if (!confirmed) return;
-
-  try {
-    const snap = await getDocs(collection(db, COL));
-    const deletes = snap.docs.map(d => deleteDoc(doc(db, COL, d.id)));
-    await Promise.all(deletes);
-    allData = [];
-    updateStats();
-    renderTable();
-    alert("✅ সব ডেটা মুছে ফেলা হয়েছে।");
-  } catch (e) {
-    console.error("Delete error:", e);
-    alert("❌ মুছতে সমস্যা হয়েছে: " + e.message);
-  }
+async function deleteAllData() {
+    if (!confirm('⚠️ সব ডেটা পার্মানেন্টলি মুছে ফেলা হবে!\n\nআপনি নিশ্চিত?')) return;
+    
+    try {
+        const batch = db.batch();
+        const snapshot = await db.collection('leaderboard').get();
+        
+        snapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        await batch.commit();
+        alert('✅ সব ডেটা মুছে ফেলা হয়েছে');
+    } catch (e) {
+        console.error(e);
+        alert('Error deleting data');
+    }
 }
 
-// =====================================================
-// Event Listeners
-// =====================================================
-document.getElementById("search-input").addEventListener("input", (e) => {
-  searchTerm = e.target.value.trim().toLowerCase();
-  renderTable();
-});
-
-document.getElementById("sort-salami").addEventListener("click", () => {
-  sortMode = "salami";
-  document.getElementById("sort-salami").classList.add("active");
-  document.getElementById("sort-latest").classList.remove("active");
-  renderTable();
-});
-
-document.getElementById("sort-latest").addEventListener("click", () => {
-  sortMode = "latest";
-  document.getElementById("sort-latest").classList.add("active");
-  document.getElementById("sort-salami").classList.remove("active");
-  renderTable();
-});
-
-document.getElementById("btn-delete-all").addEventListener("click", deleteAll);
-
-// =====================================================
-// Init
-// =====================================================
-setupRealtimeListener();
+// Start admin
+window.onload = initAdmin;
