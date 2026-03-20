@@ -1,27 +1,29 @@
-// ============== FIREBASE CONFIG ==============
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// ============== EidSalamiCalculator - admin.js ==============
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
-  authDomain: "eid-salami-calculator.firebaseapp.com",
-  projectId: "eid-salami-calculator",
-  storageBucket: "eid-salami-calculator.firebasestorage.app",
-  messagingSenderId: "1004762862713",
-  appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
+    apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
+    authDomain: "eid-salami-calculator.firebaseapp.com",
+    projectId: "eid-salami-calculator",
+    storageBucket: "eid-salami-calculator.firebasestorage.app",
+    messagingSenderId: "1004762862713",
+    appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
+let db;
 let allData = [];
 let currentSort = 'salami';
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.firestore();
+        initAdmin();
+    } catch (e) {
+        console.error("Firebase admin init error:", e);
+    }
+});
 
 function initAdmin() {
     const q = db.collection('leaderboard');
@@ -46,7 +48,6 @@ function renderAdminTable(filteredData = null) {
     
     let dataToShow = filteredData || [...allData];
     
-    // Sort
     if (currentSort === 'salami') {
         dataToShow.sort((a, b) => b.salami - a.salami);
     } else if (currentSort === 'time') {
@@ -111,6 +112,3 @@ async function deleteAllData() {
         alert('Error deleting data');
     }
 }
-
-// Start admin
-window.onload = initAdmin;

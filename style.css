@@ -8,11 +8,26 @@
 
 body {
     font-family: 'Noto Sans Bengali', system-ui, sans-serif;
-    background: linear-gradient(135deg, #006400, #ffd700);
+    background: linear-gradient(135deg, #001a00, #003300, #004d00);
     color: #fff;
     min-height: 100vh;
     padding: 20px;
     line-height: 1.6;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Deep Eid Mosque vibe overlay */
+body::before {
+    content: '🕌🌙';
+    position: fixed;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 180px;
+    opacity: 0.07;
+    z-index: -1;
+    pointer-events: none;
 }
 
 .container {
@@ -27,12 +42,14 @@ header {
 
 header h1 {
     font-size: 2.4rem;
-    text-shadow: 0 4px 15px rgba(255, 215, 0, 0.6);
+    text-shadow: 0 4px 20px rgba(255, 215, 0, 0.8);
+    color: #ffd700;
 }
 
 .subtitle {
     font-size: 1.1rem;
     opacity: 0.9;
+    color: #ffd700;
 }
 
 .screen {
@@ -45,17 +62,13 @@ header h1 {
 }
 
 .card {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(20px);
-    border: 2px solid rgba(255, 215, 0, 0.4);
+    border: 2px solid rgba(255, 215, 0, 0.5);
     border-radius: 24px;
     padding: 30px 20px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.glass {
-    background: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 .form-group {
@@ -76,13 +89,13 @@ input {
     border-radius: 12px;
     border: 2px solid #ffd700;
     background: rgba(255, 255, 255, 0.95);
-    color: #006400;
+    color: #003300;
     font-size: 1.1rem;
 }
 
 .primary-btn {
     background: #ffd700;
-    color: #006400;
+    color: #003300;
     border: none;
     padding: 16px 32px;
     font-size: 1.3rem;
@@ -96,7 +109,7 @@ input {
 
 .primary-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.6);
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.7);
 }
 
 .error-message {
@@ -112,7 +125,7 @@ input {
     margin: 20px auto;
     border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .prize-layer {
@@ -121,7 +134,7 @@ input {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(#ffd700, #ffaa00);
+    background: linear-gradient(#ffd700, #ccaa00);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -133,7 +146,7 @@ input {
 .prize-text {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #006400;
+    color: #003300;
     text-shadow: 0 2px 10px rgba(255,255,255,0.8);
 }
 
@@ -154,6 +167,47 @@ input {
     font-size: 0.95rem;
     opacity: 0.85;
     margin-top: 15px;
+    color: #ffd700;
+}
+
+/* Celebration Overlay */
+.celebration-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 51, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    opacity: 0;
+    transition: all 0.8s ease;
+}
+
+.celebration-overlay:not(.hidden) {
+    opacity: 1;
+}
+
+.eid-mubarak {
+    font-size: 3.2rem;
+    color: #ffd700;
+    text-shadow: 0 0 30px #ffd700, 0 0 50px #ffd700;
+    animation: eidPulse 1.5s infinite alternate;
+    margin-bottom: 10px;
+}
+
+.congrats-text {
+    font-size: 2rem;
+    color: #fff;
+    text-shadow: 0 0 20px #ffd700;
+}
+
+@keyframes eidPulse {
+    from { transform: scale(0.95); }
+    to { transform: scale(1.08); }
 }
 
 .result-card {
@@ -207,7 +261,7 @@ input {
 
 .action-btn:hover {
     background: #ffd700;
-    color: #006400;
+    color: #003300;
 }
 
 .action-btn.secondary {
@@ -242,19 +296,21 @@ input {
     font-size: 1.1rem;
 }
 
-.leaderboard-item:last-child {
-    margin-bottom: 0;
-}
-
-.emoji-rank {
-    font-size: 1.4rem;
+.footer {
+    text-align: center;
+    margin-top: 40px;
+    padding: 15px;
+    font-size: 0.95rem;
+    opacity: 0.85;
+    color: #ffd700;
+    border-top: 1px solid rgba(255,215,0,0.3);
 }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
-j
+
 @media (max-width: 480px) {
     .scratch-container {
         width: 320px;
@@ -263,5 +319,8 @@ j
     #scratch-canvas {
         width: 320px;
         height: 190px;
+    }
+    .eid-mubarak {
+        font-size: 2.6rem;
     }
 }

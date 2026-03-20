@@ -1,6 +1,5 @@
-// ============== EidSalamiCalculator - script.js (FULLY FIXED + REAL CONFIG) ==============
+// ============== EidSalamiCalculator - script.js (FULLY FIXED + DEEP EID THEME) ==============
 
-// Your real Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
     authDomain: "eid-salami-calculator.firebaseapp.com",
@@ -31,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         checkForSharedLink();
     } catch (e) {
         console.error("Firebase init error:", e);
-        alert("Firebase কানেকশন সমস্যা। Admin-এ গিয়ে Rules সেট করুন (allow read, write)");
     }
 });
 
@@ -153,7 +151,7 @@ function initScratchCard() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     ctx.font = 'bold 22px Noto Sans Bengali';
-    ctx.fillStyle = '#006400';
+    ctx.fillStyle = '#003300';
     ctx.textAlign = 'center';
     ctx.fillText('স্ক্র্যাচ করো!', canvas.width/2, canvas.height/2 + 10);
     
@@ -208,13 +206,23 @@ function revealScratch() {
     revealed = true;
     canvas.style.transition = 'opacity 1s';
     canvas.style.opacity = '0.05';
+    
+    // Show EID MUBARAK celebration
+    const overlay = document.getElementById('celebration-overlay');
+    overlay.classList.remove('hidden');
+    
     confettiBurst();
-    document.getElementById('continue-btn').classList.remove('hidden');
+    
+    // Auto go to result after 2.8 seconds
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+        goToResult();
+    }, 2800);
 }
 
 function confettiBurst() {
-    const count = 200;
-    const defaults = { origin: { y: 0.7 } };
+    const count = 220;
+    const defaults = { origin: { y: 0.6 } };
     function fire(ratio, opts) {
         confetti({ ...defaults, ...opts, particleCount: Math.floor(count * ratio) });
     }
@@ -241,7 +249,7 @@ function showResult() {
 
 async function downloadScreenshot() {
     const card = document.getElementById('result-card');
-    const canvasImg = await html2canvas(card, { scale: 2, backgroundColor: '#006400' });
+    const canvasImg = await html2canvas(card, { scale: 2, backgroundColor: '#003300' });
     const link = document.createElement('a');
     link.download = `eid-salami-${userName}.png`;
     link.href = canvasImg.toDataURL();

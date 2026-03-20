@@ -14,14 +14,14 @@
     <div class="container">
         <!-- HEADER -->
         <header>
-            <h1>ঈদ সালামি স্ক্র্যাচ কার্ড 💸</h1>
+            <h1>ঈদ সালামি স্ক্র্যাচ কার্ড 🕌💸</h1>
             <p class="subtitle">ঈদের সালামি জিতুন – স্ক্র্যাচ করে দেখুন!</p>
         </header>
 
         <!-- SCREENS -->
         <div id="start-screen" class="screen active">
             <div class="card glass">
-                <div class="emoji">🎉</div>
+                <div class="emoji">🕌🎉</div>
                 <h2>স্বাগতম!</h2>
                 <button onclick="startGame()" class="primary-btn">শুরু করো</button>
             </div>
@@ -45,7 +45,7 @@
 
         <div id="scratch-screen" class="screen">
             <div class="card glass scratch-card-wrapper">
-                <h2>স্ক্র্যাচ করো! ✨</h2>
+                <h2>স্ক্র্যাচ করো! ✨🕌</h2>
                 <div class="scratch-container">
                     <div id="prize-layer" class="prize-layer">
                         <div class="prize-text">
@@ -55,8 +55,13 @@
                     </div>
                     <canvas id="scratch-canvas" width="380" height="220" class="scratch-canvas"></canvas>
                 </div>
-                <button id="continue-btn" onclick="goToResult()" class="primary-btn hidden">ফলাফল দেখো 🎉</button>
                 <p class="hint">মাউস বা আঙ্গুল দিয়ে স্ক্র্যাচ করুন (৪০%+)</p>
+                
+                <!-- Celebration Overlay -->
+                <div id="celebration-overlay" class="celebration-overlay hidden">
+                    <h1 class="eid-mubarak">EID MUBARAK 🕌</h1>
+                    <h2 class="congrats-text">Congratulations!! 🎉</h2>
+                </div>
             </div>
         </div>
 
@@ -83,6 +88,11 @@
             <h2>🏆 টপ ১০ লিডারবোর্ড</h2>
             <div id="leaderboard-list" class="leaderboard-list"></div>
         </div>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            Developed @AI diye code koraisi bhai. Eid Mubarak!!
+        </footer>
     </div>
 
     <script src="script.js"></script>
