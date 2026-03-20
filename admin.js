@@ -1,5 +1,3 @@
-// ============== EidSalamiCalculator - admin.js ==============
-
 const firebaseConfig = {
     apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
     authDomain: "eid-salami-calculator.firebaseapp.com",
@@ -14,20 +12,13 @@ let allData = [];
 let currentSort = 'salami';
 
 document.addEventListener('DOMContentLoaded', () => {
-    try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        db = firebase.firestore();
-        initAdmin();
-    } catch (e) {
-        console.error("Firebase admin init error:", e);
-    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    initAdmin();
 });
 
 function initAdmin() {
     const q = db.collection('leaderboard');
-    
     q.onSnapshot(snapshot => {
         allData = [];
         snapshot.forEach(doc => {
@@ -45,25 +36,13 @@ function initAdmin() {
 function renderAdminTable(filteredData = null) {
     const tbody = document.getElementById('admin-tbody');
     tbody.innerHTML = '';
-    
     let dataToShow = filteredData || [...allData];
-    
-    if (currentSort === 'salami') {
-        dataToShow.sort((a, b) => b.salami - a.salami);
-    } else if (currentSort === 'time') {
-        dataToShow.sort((a, b) => b.timestamp - a.timestamp);
-    }
+    if (currentSort === 'salami') dataToShow.sort((a, b) => b.salami - a.salami);
+    else if (currentSort === 'time') dataToShow.sort((a, b) => b.timestamp - a.timestamp);
     
     dataToShow.forEach(item => {
         const row = document.createElement('tr');
-        const timeStr = item.timestamp.toLocaleString('bn-BD', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        
+        const timeStr = item.timestamp.toLocaleString('bn-BD', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         row.innerHTML = `
             <td>${item.username}</td>
             <td>${item.targetName}</td>
@@ -77,14 +56,9 @@ function renderAdminTable(filteredData = null) {
 
 function filterTable() {
     const term = document.getElementById('search-input').value.toLowerCase().trim();
-    if (!term) {
-        renderAdminTable();
-        return;
-    }
-    
+    if (!term) { renderAdminTable(); return; }
     const filtered = allData.filter(item => 
-        item.username.toLowerCase().includes(term) ||
-        item.targetName.toLowerCase().includes(term)
+        item.username.toLowerCase().includes(term) || item.targetName.toLowerCase().includes(term)
     );
     renderAdminTable(filtered);
 }
@@ -96,19 +70,11 @@ function sortTable(mode) {
 
 async function deleteAllData() {
     if (!confirm('⚠️ সব ডেটা পার্মানেন্টলি মুছে ফেলা হবে!\n\nআপনি নিশ্চিত?')) return;
-    
     try {
         const batch = db.batch();
         const snapshot = await db.collection('leaderboard').get();
-        
-        snapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        
+        snapshot.forEach(doc => batch.delete(doc.ref));
         await batch.commit();
         alert('✅ সব ডেটা মুছে ফেলা হয়েছে');
-    } catch (e) {
-        console.error(e);
-        alert('Error deleting data');
-    }
+    } catch (e) { alert('Error deleting data'); }
 }

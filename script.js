@@ -1,4 +1,4 @@
-// ============== EidSalamiCalculator - script.js (MOBILE-FIXED SCRATCH) ==============
+// ============== EidSalamiCalculator - FIXED SCRATCH (Mobile + Desktop) ==============
 
 const firebaseConfig = {
     apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
@@ -10,38 +10,22 @@ const firebaseConfig = {
 };
 
 let db;
+let userName = '', targetName = '', salamiAmount = 0;
+let canvas, ctx, revealed = false;
 
-// Global variables
-let userName = '';
-let targetName = '';
-let salamiAmount = 0;
-let userIP = '';
-
-// Safe initialization
 document.addEventListener('DOMContentLoaded', () => {
-    try {
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        db = firebase.firestore();
-        console.log("✅ Firebase initialized successfully!");
-
-        initFirebaseListeners();
-        checkForSharedLink();
-    } catch (e) {
-        console.error("Firebase init error:", e);
-    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    initFirebaseListeners();
+    checkForSharedLink();
 });
 
-// ================== CORE FUNCTIONS ==================
 async function getIP() {
     try {
         const res = await fetch('https://api.ipify.org?format=json');
         const data = await res.json();
         return data.ip;
-    } catch (e) {
-        return 'unknown';
-    }
+    } catch (e) { return 'unknown'; }
 }
 
 function getLocalUserId() {
@@ -55,38 +39,20 @@ function getLocalUserId() {
 
 async function saveToLeaderboard() {
     if (!salamiAmount || !userName || !db) return;
-    
     const ip = await getIP();
-    userIP = ip;
     const userId = ip || getLocalUserId();
-
     const docRef = db.collection('leaderboard').doc(userId);
-    
     try {
         const docSnap = await docRef.get();
         if (docSnap.exists()) {
             const existing = docSnap.data();
             if (salamiAmount > existing.salami) {
-                await docRef.update({
-                    username: userName,
-                    targetName: targetName,
-                    salami: salamiAmount,
-                    ip: userIP,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                await docRef.update({ username: userName, targetName, salami: salamiAmount, ip, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
             }
         } else {
-            await docRef.set({
-                username: userName,
-                targetName: targetName,
-                salami: salamiAmount,
-                ip: userIP,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            await docRef.set({ username: userName, targetName, salami: salamiAmount, ip, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         }
-    } catch (e) {
-        console.error("Firestore save error:", e);
-    }
+    } catch (e) {}
 }
 
 function checkForSharedLink() {
@@ -95,12 +61,8 @@ function checkForSharedLink() {
         userName = decodeURIComponent(params.get('name'));
         targetName = decodeURIComponent(params.get('target'));
         salamiAmount = parseInt(params.get('salami'));
-        
         document.getElementById('start-screen').classList.remove('active');
-        document.getElementById('name-screen').classList.remove('active');
-        document.getElementById('scratch-screen').classList.remove('active');
         document.getElementById('result-screen').classList.add('active');
-        
         showResult();
         saveToLeaderboard();
     }
@@ -125,49 +87,41 @@ function submitNames() {
     targetName = targetInput;
     errorEl.textContent = '';
 
-    const isBetter = targetName.toLowerCase().includes('shahab') || 
-                     targetName.toLowerCase().includes('sahab') || 
-                     targetName.includes('সাহাব');
-    
-    salamiAmount = isBetter 
-        ? Math.floor(Math.random() * 91) + 10 
-        : Math.floor(Math.random() * 49) + 2;
+    const isBetter = targetName.toLowerCase().includes('shahab') || targetName.toLowerCase().includes('sahab') || targetName.includes('সাহাব');
+    salamiAmount = isBetter ? Math.floor(Math.random() * 91) + 10 : Math.floor(Math.random() * 49) + 2;
 
     document.getElementById('name-screen').classList.remove('active');
     document.getElementById('scratch-screen').classList.add('active');
-    
     document.getElementById('scratch-salami').textContent = salamiAmount;
-    initScratchCard();
+
+    // IMPORTANT: Wait for DOM to render before initializing canvas
+    setTimeout(initScratchCard, 200);
 }
 
-// ================== FIXED MOBILE SCRATCH CARD ==================
-let canvas, ctx, isDrawing = false, lastX = 0, lastY = 0, revealed = false;
-
+// ================== SCRATCH LOGIC (Fully Fixed) ==================
 function initScratchCard() {
     canvas = document.getElementById('scratch-canvas');
     const container = canvas.parentElement;
-    
-    // Dynamic size for mobile + desktop (fixes stretching)
-    canvas.width = container.offsetWidth;
-    canvas.height = container.offsetHeight;
-    
+
+    canvas.width = container.offsetWidth || 380;
+    canvas.height = container.offsetHeight || 220;
+
     ctx = canvas.getContext('2d');
-    
     ctx.fillStyle = '#e8b923';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.font = 'bold 22px Noto Sans Bengali';
+
+    ctx.font = 'bold 24px Noto Sans Bengali';
     ctx.fillStyle = '#003300';
     ctx.textAlign = 'center';
-    ctx.fillText('স্ক্র্যাচ করো!', canvas.width/2, canvas.height/2 + 10);
-    
+    ctx.fillText('স্ক্র্যাচ করো!', canvas.width/2, canvas.height/2 + 12);
+
     // Mouse
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
-    
-    // Touch (mobile)
+    canvas.addEventListener('mouseleave', stopDrawing);
+
+    // Touch (Mobile)
     canvas.addEventListener('touchstart', startDrawingTouch, { passive: false });
     canvas.addEventListener('touchmove', drawTouch, { passive: false });
     canvas.addEventListener('touchend', stopDrawing);
@@ -176,24 +130,14 @@ function initScratchCard() {
 function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
     if (e.touches) {
-        return { 
-            x: e.touches[0].clientX - rect.left, 
-            y: e.touches[0].clientY - rect.top 
-        };
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
     }
-    return { 
-        x: e.clientX - rect.left, 
-        y: e.clientY - rect.top 
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
-function startDrawing(e) { 
-    isDrawing = true; 
-    const c = getCoordinates(e); 
-    lastX = c.x; 
-    lastY = c.y; 
-}
+let isDrawing = false, lastX = 0, lastY = 0;
 
+function startDrawing(e) { isDrawing = true; const c = getCoordinates(e); lastX = c.x; lastY = c.y; }
 function draw(e) {
     if (!isDrawing || revealed) return;
     const c = getCoordinates(e);
@@ -204,27 +148,12 @@ function draw(e) {
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(c.x, c.y);
     ctx.stroke();
-    lastX = c.x; 
-    lastY = c.y;
+    lastX = c.x; lastY = c.y;
     if (Math.random() < 0.15) checkScratchProgress();
 }
-
-function stopDrawing() { 
-    if (isDrawing) { 
-        isDrawing = false; 
-        checkScratchProgress(); 
-    } 
-}
-
-function startDrawingTouch(e) { 
-    e.preventDefault(); 
-    startDrawing(e); 
-}
-
-function drawTouch(e) { 
-    e.preventDefault(); 
-    draw(e); 
-}
+function stopDrawing() { if (isDrawing) { isDrawing = false; checkScratchProgress(); } }
+function startDrawingTouch(e) { e.preventDefault(); startDrawing(e); }
+function drawTouch(e) { e.preventDefault(); draw(e); }
 
 function checkScratchProgress() {
     if (revealed) return;
@@ -244,9 +173,8 @@ function revealScratch() {
     
     const overlay = document.getElementById('celebration-overlay');
     overlay.classList.remove('hidden');
-    
     confettiBurst();
-    
+
     setTimeout(() => {
         overlay.classList.add('hidden');
         goToResult();
@@ -266,7 +194,6 @@ function confettiBurst() {
     fire(0.1, { spread: 120, startVelocity: 45 });
 }
 
-// ================== RESULT & SHARE ==================
 function goToResult() {
     document.getElementById('scratch-screen').classList.remove('active');
     document.getElementById('result-screen').classList.add('active');
@@ -322,7 +249,7 @@ function renderLeaderboard() {
         const div = document.createElement('div');
         div.className = 'leaderboard-item';
         div.innerHTML = `
-            <span>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑'} ${d.username}</span>
+            <span>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑'} ${d.username || 'Anonymous'}</span>
             <span><strong>${d.salami}</strong> টাকা</span>
         `;
         container.appendChild(div);
