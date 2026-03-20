@@ -1,51 +1,51 @@
-// ============== FIREBASE CONFIG ==============
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// ============== EidSalamiCalculator - script.js (FULLY FIXED + REAL CONFIG) ==============
 
-// Your web app's Firebase configuration
+// Your real Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
-  authDomain: "eid-salami-calculator.firebaseapp.com",
-  projectId: "eid-salami-calculator",
-  storageBucket: "eid-salami-calculator.firebasestorage.app",
-  messagingSenderId: "1004762862713",
-  appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
+    apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
+    authDomain: "eid-salami-calculator.firebaseapp.com",
+    projectId: "eid-salami-calculator",
+    storageBucket: "eid-salami-calculator.firebasestorage.app",
+    messagingSenderId: "1004762862713",
+    appId: "1:1004762862713:web:9b541cd2bfa3da1ee1f0a8"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-
-// Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db;
 
 // Global variables
 let userName = '';
 let targetName = '';
 let salamiAmount = 0;
 let userIP = '';
-let userId = '';
 
-// DOM ready
+// Safe initialization
 document.addEventListener('DOMContentLoaded', () => {
-    initFirebaseListeners();
-    checkForSharedLink();
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.firestore();
+        console.log("✅ Firebase initialized successfully!");
+
+        initFirebaseListeners();
+        checkForSharedLink();
+    } catch (e) {
+        console.error("Firebase init error:", e);
+        alert("Firebase কানেকশন সমস্যা। Admin-এ গিয়ে Rules সেট করুন (allow read, write)");
+    }
 });
 
-// Get IP
+// ================== CORE FUNCTIONS ==================
 async function getIP() {
     try {
         const res = await fetch('https://api.ipify.org?format=json');
         const data = await res.json();
         return data.ip;
     } catch (e) {
-        return null;
+        return 'unknown';
     }
 }
 
-// Get or create local user ID
 function getLocalUserId() {
     let id = localStorage.getItem('eidSalamiUserId');
     if (!id) {
@@ -55,19 +55,17 @@ function getLocalUserId() {
     return id;
 }
 
-// Save to Firestore (one per IP)
 async function saveToLeaderboard() {
-    if (!salamiAmount || !userName) return;
+    if (!salamiAmount || !userName || !db) return;
     
     const ip = await getIP();
-    userIP = ip || 'unknown';
-    userId = ip || getLocalUserId();
+    userIP = ip;
+    const userId = ip || getLocalUserId();
 
     const docRef = db.collection('leaderboard').doc(userId);
     
     try {
         const docSnap = await docRef.get();
-        
         if (docSnap.exists()) {
             const existing = docSnap.data();
             if (salamiAmount > existing.salami) {
@@ -88,13 +86,11 @@ async function saveToLeaderboard() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
         }
-        refreshLeaderboard();
     } catch (e) {
-        console.error("Firestore error:", e);
+        console.error("Firestore save error:", e);
     }
 }
 
-// Check URL params for shared result
 function checkForSharedLink() {
     const params = new URLSearchParams(window.location.search);
     if (params.has('name') && params.has('target') && params.has('salami')) {
@@ -112,13 +108,11 @@ function checkForSharedLink() {
     }
 }
 
-// Start game
 function startGame() {
     document.getElementById('start-screen').classList.remove('active');
     document.getElementById('name-screen').classList.add('active');
 }
 
-// Submit names
 function submitNames() {
     const userInput = document.getElementById('user-name').value.trim();
     const targetInput = document.getElementById('target-name').value.trim();
@@ -133,7 +127,6 @@ function submitNames() {
     targetName = targetInput;
     errorEl.textContent = '';
 
-    // Generate salami
     const isBetter = targetName.toLowerCase().includes('shahab') || 
                      targetName.toLowerCase().includes('sahab') || 
                      targetName.includes('সাহাব');
@@ -142,40 +135,33 @@ function submitNames() {
         ? Math.floor(Math.random() * 91) + 10 
         : Math.floor(Math.random() * 49) + 2;
 
-    // Switch to scratch
     document.getElementById('name-screen').classList.remove('active');
     document.getElementById('scratch-screen').classList.add('active');
     
-    // Prepare scratch
     document.getElementById('scratch-salami').textContent = salamiAmount;
     initScratchCard();
 }
 
-// Scratch card logic
-let canvas, ctx, isDrawing = false, lastX = 0, lastY = 0;
-let revealed = false;
+// ================== SCRATCH CARD ==================
+let canvas, ctx, isDrawing = false, lastX = 0, lastY = 0, revealed = false;
 
 function initScratchCard() {
     canvas = document.getElementById('scratch-canvas');
     ctx = canvas.getContext('2d');
     
-    // Fill scratch layer
     ctx.fillStyle = '#e8b923';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Add "Scratch Here" text
     ctx.font = 'bold 22px Noto Sans Bengali';
     ctx.fillStyle = '#006400';
     ctx.textAlign = 'center';
     ctx.fillText('স্ক্র্যাচ করো!', canvas.width/2, canvas.height/2 + 10);
     
-    // Mouse events
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
     
-    // Touch events
     canvas.addEventListener('touchstart', startDrawingTouch);
     canvas.addEventListener('touchmove', drawTouch);
     canvas.addEventListener('touchend', stopDrawing);
@@ -184,113 +170,62 @@ function initScratchCard() {
 function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
     if (e.touches) {
-        return {
-            x: e.touches[0].clientX - rect.left,
-            y: e.touches[0].clientY - rect.top
-        };
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
     }
-    return {
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top
-    };
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
 }
 
-function startDrawing(e) {
-    isDrawing = true;
-    const coords = getCoordinates(e);
-    lastX = coords.x;
-    lastY = coords.y;
-}
-
+function startDrawing(e) { isDrawing = true; const c = getCoordinates(e); lastX = c.x; lastY = c.y; }
 function draw(e) {
     if (!isDrawing || revealed) return;
-    const coords = getCoordinates(e);
-    
+    const c = getCoordinates(e);
     ctx.globalCompositeOperation = 'destination-out';
     ctx.lineWidth = 28;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    
+    ctx.lineJoin = ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
-    ctx.lineTo(coords.x, coords.y);
+    ctx.lineTo(c.x, c.y);
     ctx.stroke();
-    
-    lastX = coords.x;
-    lastY = coords.y;
-    
-    // Check percentage every 8 strokes
-    if (Math.random() < 0.12) checkScratchProgress();
+    lastX = c.x; lastY = c.y;
+    if (Math.random() < 0.15) checkScratchProgress();
 }
-
-function stopDrawing() {
-    if (isDrawing) {
-        isDrawing = false;
-        checkScratchProgress();
-    }
-}
-
-function startDrawingTouch(e) {
-    e.preventDefault();
-    startDrawing(e);
-}
-
-function drawTouch(e) {
-    e.preventDefault();
-    draw(e);
-}
+function stopDrawing() { if (isDrawing) { isDrawing = false; checkScratchProgress(); } }
+function startDrawingTouch(e) { e.preventDefault(); startDrawing(e); }
+function drawTouch(e) { e.preventDefault(); draw(e); }
 
 function checkScratchProgress() {
     if (revealed) return;
-    
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let transparentPixels = 0;
+    let transparent = 0;
     const total = imageData.data.length / 4;
-    
     for (let i = 3; i < imageData.data.length; i += 4) {
-        if (imageData.data[i] < 50) transparentPixels++;
+        if (imageData.data[i] < 50) transparent++;
     }
-    
-    const percent = (transparentPixels / total) * 100;
-    
-    if (percent >= 40) {
-        revealScratch();
-    }
+    if ((transparent / total) * 100 >= 40) revealScratch();
 }
 
 function revealScratch() {
     revealed = true;
-    canvas.style.transition = 'opacity 1.2s ease';
-    canvas.style.opacity = '0.08';
-    
-    // Confetti celebration
+    canvas.style.transition = 'opacity 1s';
+    canvas.style.opacity = '0.05';
     confettiBurst();
-    
-    // Show continue button
     document.getElementById('continue-btn').classList.remove('hidden');
 }
 
-// Confetti
 function confettiBurst() {
-    const count = 180;
-    const defaults = { origin: { y: 0.6 } };
-    
-    function fire(particleRatio, opts) {
-        confetti({
-            ...defaults,
-            ...opts,
-            particleCount: Math.floor(count * particleRatio)
-        });
+    const count = 200;
+    const defaults = { origin: { y: 0.7 } };
+    function fire(ratio, opts) {
+        confetti({ ...defaults, ...opts, particleCount: Math.floor(count * ratio) });
     }
-    
     fire(0.25, { spread: 26, startVelocity: 55 });
     fire(0.2, { spread: 60 });
-    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92 });
+    fire(0.35, { spread: 100, decay: 0.91 });
+    fire(0.1, { spread: 120, startVelocity: 25 });
     fire(0.1, { spread: 120, startVelocity: 45 });
 }
 
-// Go to result
+// ================== RESULT & SHARE ==================
 function goToResult() {
     document.getElementById('scratch-screen').classList.remove('active');
     document.getElementById('result-screen').classList.add('active');
@@ -304,72 +239,50 @@ function showResult() {
     document.getElementById('final-salami').textContent = salamiAmount;
 }
 
-// Download screenshot
 async function downloadScreenshot() {
-    const resultCard = document.getElementById('result-card');
-    const canvas = await html2canvas(resultCard, {
-        scale: 2,
-        backgroundColor: '#006400'
-    });
-    
+    const card = document.getElementById('result-card');
+    const canvasImg = await html2canvas(card, { scale: 2, backgroundColor: '#006400' });
     const link = document.createElement('a');
     link.download = `eid-salami-${userName}.png`;
-    link.href = canvas.toDataURL('image/png');
+    link.href = canvasImg.toDataURL();
     link.click();
 }
 
-// Share
 function shareResult() {
-    const params = new URLSearchParams({
-        name: userName,
-        target: targetName,
-        salami: salamiAmount
-    });
-    
-    const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-    
-    navigator.clipboard.writeText(shareUrl).then(() => {
-        alert('✅ শেয়ার লিংক কপি হয়েছে!\n\nবন্ধুদের পাঠিয়ে দিন 🎉');
-    });
+    const params = new URLSearchParams({ name: userName, target: targetName, salami: salamiAmount });
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    navigator.clipboard.writeText(url).then(() => alert('✅ শেয়ার লিংক কপি হয়েছে!'));
 }
 
-// Restart
 function restartGame() {
     location.reload();
 }
 
-// Leaderboard
+// ================== LEADERBOARD ==================
 let leaderboardSnapshot = null;
 
 function initFirebaseListeners() {
-    const q = db.collection('leaderboard')
-        .orderBy('salami', 'desc')
-        .limit(10);
-    
-    q.onSnapshot(snapshot => {
-        leaderboardSnapshot = snapshot;
+    if (!db) return;
+    const q = db.collection('leaderboard').orderBy('salami', 'desc').limit(10);
+    q.onSnapshot(snap => {
+        leaderboardSnapshot = snap;
         renderLeaderboard();
     });
-}
-
-function refreshLeaderboard() {
-    // Already real-time via onSnapshot
 }
 
 function renderLeaderboard() {
     const container = document.getElementById('leaderboard-list');
     container.innerHTML = '';
-    
     if (!leaderboardSnapshot) return;
     
     let rank = 1;
     leaderboardSnapshot.forEach(doc => {
-        const data = doc.data();
+        const d = doc.data();
         const div = document.createElement('div');
         div.className = 'leaderboard-item';
         div.innerHTML = `
-            <span class="emoji-rank">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑'} ${data.username}</span>
-            <span><strong>${data.salami}</strong> টাকা</span>
+            <span>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑'} ${d.username}</span>
+            <span><strong>${d.salami}</strong> টাকা</span>
         `;
         container.appendChild(div);
         rank++;
