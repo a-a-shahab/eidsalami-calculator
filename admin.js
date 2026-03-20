@@ -18,19 +18,63 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initAdmin() {
-    // Removed orderBy - requires a Firestore composite index, silently fails without one.
-    // Sorting handled client-side in renderAdminTable.
-    db.collection('leaderboard').onSnapshot(
-        function(snapshot) {
-            allData = [];
-            snapshot.forEach(function(doc) {
-                var data = doc.data();
-                allData.push(Object.assign({ id: doc.id }, data, {
-                    timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
-                }));
+    const q = db.collection('leaderboard');
+    q.onSnapshot(snapshot => {
+        allData = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            allData.push({
+                id: doc.id,
+                ...data,
+                timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
             });
-            renderAdminTable();
-        },
-        function(err) { console.error('Admin snapshot error:', err); }
+        });
+        renderAdminTable();
+    });
+}
+
+function renderAdminTable(filteredData = null) {
+    const tbody = document.getElementById('admin-tbody');
+    tbody.innerHTML = '';
+    let dataToShow = filteredData || [...allData];
+    if (currentSort === 'salami') dataToShow.sort((a, b) => b.salami - a.salami);
+    else if (currentSort === 'time') dataToShow.sort((a, b) => b.timestamp - a.timestamp);
+    
+    dataToShow.forEach(item => {
+        const row = document.createElement('tr');
+        const timeStr = item.timestamp.toLocaleString('bn-BD', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        row.innerHTML = `
+            <td>${item.username}</td>
+            <td>${item.targetName}</td>
+            <td><strong>${item.salami}</strong></td>
+            <td>${item.ip}</td>
+            <td>${timeStr}</td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function filterTable() {
+    const term = document.getElementById('search-input').value.toLowerCase().trim();
+    if (!term) { renderAdminTable(); return; }
+    const filtered = allData.filter(item => 
+        item.username.toLowerCase().includes(term) || item.targetName.toLowerCase().includes(term)
     );
+    renderAdminTable(filtered);
+}
+
+function sortTable(mode) {
+    currentSort = mode;
+    renderAdminTable();
+}
+
+async function deleteAllData() {
+    if (!confirm('⚠️ সব ডেটা পার্মানেন্টলি মুছে ফেলা হবে!\n\nআপনি নিশ্চিত?')) return;
+    try {
+        const batch = db.batch();
+        const snapshot = await db.collection('leaderboard').get();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        alert('✅ সব ডেটা মুছে ফেলা হয়েছে');
+    } catch (e) { alert('Error deleting data'); }
 }

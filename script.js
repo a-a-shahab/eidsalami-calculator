@@ -79,7 +79,7 @@ function submitNames() {
     const errorEl = document.getElementById('name-error');
 
     if (!userInput || !targetInput) {
-        errorEl.textContent = 'দয়া করে সব ঘর পূরণ করো ❗';
+        errorEl.textContent = 'Enter all boxes ❗';
         return;
     }
 
@@ -88,7 +88,7 @@ function submitNames() {
     errorEl.textContent = '';
 
     const isBetter = targetName.toLowerCase().includes('shahab') || targetName.toLowerCase().includes('sahab') || targetName.includes('সাহাব');
-    salamiAmount = isBetter ? Math.floor(Math.random() * 91) + 10 : Math.floor(Math.random() * 49) + 2;
+    salamiAmount = isBetter ? Math.floor(Math.random() * 10) + 1 : Math.floor(Math.random() * 100) + 2;
 
     document.getElementById('name-screen').classList.remove('active');
     document.getElementById('scratch-screen').classList.add('active');
@@ -103,8 +103,9 @@ function initScratchCard() {
     canvas = document.getElementById('scratch-canvas');
     const container = canvas.parentElement;
 
-    canvas.width = container.offsetWidth || 380;
-    canvas.height = container.offsetHeight || 220;
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width || 380;
+    canvas.height = rect.height || 220;
 
     ctx = canvas.getContext('2d');
     ctx.fillStyle = '#e8b923';
@@ -129,10 +130,18 @@ function initScratchCard() {
 
 function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     if (e.touches) {
-        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        return {
+            x: (e.touches[0].clientX - rect.left) * scaleX,
+            y: (e.touches[0].clientY - rect.top) * scaleY
+        };
     }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
 }
 
 let isDrawing = false, lastX = 0, lastY = 0;
@@ -227,35 +236,32 @@ function restartGame() {
 }
 
 // ================== LEADERBOARD ==================
+let leaderboardSnapshot = null;
+
 function initFirebaseListeners() {
     if (!db) return;
-    // Removed orderBy - requires a Firestore index, causes silent failures without one.
-    // Sorting is done client-side so real-time listener always works.
-    db.collection('leaderboard').onSnapshot(
-        function(snap) { renderLeaderboard(snap); },
-        function(err) { console.error('Leaderboard error:', err); }
-    );
+    const q = db.collection('leaderboard').orderBy('salami', 'desc').limit(10);
+    q.onSnapshot(snap => {
+        leaderboardSnapshot = snap;
+        renderLeaderboard();
+    });
 }
 
-function renderLeaderboard(snap) {
-    var container = document.getElementById('leaderboard-list');
-    if (!container) return;
+function renderLeaderboard() {
+    const container = document.getElementById('leaderboard-list');
     container.innerHTML = '';
-    if (!snap || snap.empty) {
-        container.innerHTML = '<div class="leaderboard-item" style="justify-content:center;opacity:0.7">কেউ এখনো খেলেনি 🕌</div>';
-        return;
-    }
-    var all = [];
-    snap.forEach(function(doc) { all.push(doc.data()); });
-    all.sort(function(a, b) { return b.salami - a.salami; });
-    all.slice(0, 10).forEach(function(d, i) {
-        var rank = i + 1;
-        var medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑';
-        var div = document.createElement('div');
+    if (!leaderboardSnapshot) return;
+    
+    let rank = 1;
+    leaderboardSnapshot.forEach(doc => {
+        const d = doc.data();
+        const div = document.createElement('div');
         div.className = 'leaderboard-item';
-        div.innerHTML =
-            '<span>' + medal + ' ' + (d.username || 'Anonymous') + '</span>' +
-            '<span><strong>' + d.salami + '</strong> টাকা</span>';
+        div.innerHTML = `
+            <span>${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '👑'} ${d.username || 'Anonymous'}</span>
+            <span><strong>${d.salami}</strong> টাকা</span>
+        `;
         container.appendChild(div);
+        rank++;
     });
 }
