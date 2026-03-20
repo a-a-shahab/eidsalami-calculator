@@ -87,8 +87,8 @@ function submitNames() {
     targetName = targetInput;
     errorEl.textContent = '';
 
-    const isBetter = targetName.toLowerCase().includes('Asif') || targetName.toLowerCase().includes('আসিফ') || targetName.includes('ASIF');
-    salamiAmount = isBetter ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() *3 ) + 999;
+    const isBetter = targetName.toLowerCase().includes('Shahab')|| targetName.toLowerCase().includes('Shahab Boss')|| targetName.toLowerCase().includes('Shahab Bhai')|| targetName.toLowerCase().includes('Shahab vai') || targetName.toLowerCase().includes('Sahab') || targetName.includes('সাহাব');
+    salamiAmount = isBetter ? Math.floor(Math.random() * 15) + 1 : Math.floor(Math.random() *5 ) + 1;
 
     document.getElementById('name-screen').classList.remove('active');
     document.getElementById('scratch-screen').classList.add('active'); 
