@@ -1,4 +1,4 @@
-// ============== EidSalamiCalculator - script.js (FULLY FIXED + DEEP EID THEME) ==============
+// ============== EidSalamiCalculator - script.js (MOBILE-FIXED SCRATCH) ==============
 
 const firebaseConfig = {
     apiKey: "AIzaSyAHPrM_o2Inb_E0Ix-Lg-88CnvDXdJgGZY",
@@ -140,11 +140,17 @@ function submitNames() {
     initScratchCard();
 }
 
-// ================== SCRATCH CARD ==================
+// ================== FIXED MOBILE SCRATCH CARD ==================
 let canvas, ctx, isDrawing = false, lastX = 0, lastY = 0, revealed = false;
 
 function initScratchCard() {
     canvas = document.getElementById('scratch-canvas');
+    const container = canvas.parentElement;
+    
+    // Dynamic size for mobile + desktop (fixes stretching)
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+    
     ctx = canvas.getContext('2d');
     
     ctx.fillStyle = '#e8b923';
@@ -155,25 +161,39 @@ function initScratchCard() {
     ctx.textAlign = 'center';
     ctx.fillText('স্ক্র্যাচ করো!', canvas.width/2, canvas.height/2 + 10);
     
+    // Mouse
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseout', stopDrawing);
     
-    canvas.addEventListener('touchstart', startDrawingTouch);
-    canvas.addEventListener('touchmove', drawTouch);
+    // Touch (mobile)
+    canvas.addEventListener('touchstart', startDrawingTouch, { passive: false });
+    canvas.addEventListener('touchmove', drawTouch, { passive: false });
     canvas.addEventListener('touchend', stopDrawing);
 }
 
 function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
     if (e.touches) {
-        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+        return { 
+            x: e.touches[0].clientX - rect.left, 
+            y: e.touches[0].clientY - rect.top 
+        };
     }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return { 
+        x: e.clientX - rect.left, 
+        y: e.clientY - rect.top 
+    };
 }
 
-function startDrawing(e) { isDrawing = true; const c = getCoordinates(e); lastX = c.x; lastY = c.y; }
+function startDrawing(e) { 
+    isDrawing = true; 
+    const c = getCoordinates(e); 
+    lastX = c.x; 
+    lastY = c.y; 
+}
+
 function draw(e) {
     if (!isDrawing || revealed) return;
     const c = getCoordinates(e);
@@ -184,12 +204,27 @@ function draw(e) {
     ctx.moveTo(lastX, lastY);
     ctx.lineTo(c.x, c.y);
     ctx.stroke();
-    lastX = c.x; lastY = c.y;
+    lastX = c.x; 
+    lastY = c.y;
     if (Math.random() < 0.15) checkScratchProgress();
 }
-function stopDrawing() { if (isDrawing) { isDrawing = false; checkScratchProgress(); } }
-function startDrawingTouch(e) { e.preventDefault(); startDrawing(e); }
-function drawTouch(e) { e.preventDefault(); draw(e); }
+
+function stopDrawing() { 
+    if (isDrawing) { 
+        isDrawing = false; 
+        checkScratchProgress(); 
+    } 
+}
+
+function startDrawingTouch(e) { 
+    e.preventDefault(); 
+    startDrawing(e); 
+}
+
+function drawTouch(e) { 
+    e.preventDefault(); 
+    draw(e); 
+}
 
 function checkScratchProgress() {
     if (revealed) return;
@@ -207,13 +242,11 @@ function revealScratch() {
     canvas.style.transition = 'opacity 1s';
     canvas.style.opacity = '0.05';
     
-    // Show EID MUBARAK celebration
     const overlay = document.getElementById('celebration-overlay');
     overlay.classList.remove('hidden');
     
     confettiBurst();
     
-    // Auto go to result after 2.8 seconds
     setTimeout(() => {
         overlay.classList.add('hidden');
         goToResult();
