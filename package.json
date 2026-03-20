@@ -1,0 +1,23 @@
+{
+  "name": "eidsalami-calculator",
+  "version": "1.0.0",
+  "description": "Eid Salami Scratch Card Calculator",
+  "main": "index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a-a-shahab/eidsalami-calculator.git"
+  },
+  "keywords": [
+    "eid",
+    "calculator",
+    "scratch-card"
+  ],
+  "author": "a-a-shahab",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/analytics": "^1.4.1"
+  }
+}
